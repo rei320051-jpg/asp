@@ -618,6 +618,10 @@ function initCharts() {
     });
     
     const fatalityCtx = document.getElementById('fatalityChart').getContext('2d');
+    const airlineColors = [
+        '#0066CC', '#E85D3A', '#2E9A5E', '#8B5CF6', '#F59E0B',
+        '#EC4899', '#06B6D4', '#F97316', '#14B8A6', '#A855F7'
+    ];
     fatalityChart = new Chart(fatalityCtx, {
         type: 'bar',
         data: {
@@ -625,9 +629,11 @@ function initCharts() {
             datasets: [{
                 label: 'Fatalities',
                 data: [],
-                backgroundColor: '#0066CC',
+                backgroundColor: airlineColors.slice(0, 10),
                 borderRadius: 4,
-                barThickness: 24
+                barThickness: 14,
+                categoryPercentage: 0.7,
+                barPercentage: 0.75
             }]
         },
         options: {
