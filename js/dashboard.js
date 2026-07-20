@@ -750,7 +750,7 @@ function updateStatCards(accidents) {
     
     const safestYearEl = document.getElementById('stat-safest-year');
     if (safestYearEl) {
-        safestYearEl.textContent = safestYear === '--' ? safestYear : `${safestYear} (${minAccidents})`;
+        safestYearEl.textContent = safestYear === '--' ? safestYear : `${safestYear}`;
     }
     
     const airlineCounts = {};
