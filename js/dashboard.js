@@ -279,7 +279,7 @@ function initEarthCanvas() {
             sweepAngle++;
             needsRedraw = true;
             scheduleDraw();
-        }, 100);
+        }, 40);
     }
 
     function draw() {
