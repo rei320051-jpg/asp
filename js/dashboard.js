@@ -775,7 +775,7 @@ function updateStatCards(accidents) {
     
     const riskAirlineEl = document.getElementById('stat-high-risk-airline');
     if (riskAirlineEl) {
-        riskAirlineEl.textContent = highRiskAirline === '--' ? highRiskAirline : `${highRiskAirline} (${maxAccidents})`;
+        riskAirlineEl.textContent = highRiskAirline === '--' ? highRiskAirline : `${td(highRiskAirline)}`;
     }
 }
 function animateNumber(element, target) {
