@@ -104,11 +104,11 @@ function initEarthCanvas() {
                     <div class="ts-lbl">${t('tooltip.fatalities')}</div>
                 </div>
                 <div class="tooltip-stat warning">
-                    <div class="ts-num">${accident.injured || 0}</div>
+                    <div class="ts-num">${accident.injuries || 0}</div>
                     <div class="ts-lbl">${t('tooltip.injured')}</div>
                 </div>
                 <div class="tooltip-stat success">
-                    <div class="ts-num">${accident.uninjured || 0}</div>
+                    <div class="ts-num">${Math.max(0, (accident.totalOccupants || 0) - (accident.fatalities || 0) - (accident.injuries || 0))}</div>
                     <div class="ts-lbl">${t('tooltip.uninjured')}</div>
                 </div>
             </div>
@@ -896,11 +896,11 @@ function updatePhaseGrid(accidents) {
 }
 function updateSurvivalChart(accidents) {
     const stats = { fatal: 0, injured: 0, uninjured: 0 };
-    
+
     accidents.forEach(a => {
         stats.fatal += a.fatalities || 0;
-        stats.injured += a.injured || 0;
-        stats.uninjured += a.uninjured || 0;
+        stats.injured += a.injuries || 0;
+        stats.uninjured += Math.max(0, (a.totalOccupants || 0) - (a.fatalities || 0) - (a.injuries || 0));
     });
     
     survivalChart.data.labels = ['Total'];
