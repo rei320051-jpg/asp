@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n-title="pageTitle">Aviation Safety Analytics | Dashboard</title>
+    
+    <!-- Chart.js -->
+    <script src="lib/chart.umd.min.js" defer></script>
+    <!-- D3 + TopoJSON for world map -->
+    <script src="lib/d3.min.js" defer></script>
+    <script src="lib/topojson-client.min.js" defer></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <!-- 预加载地图数据，与脚本并行下载 -->
+    <link rel="preload" href="data/countries-110m.json" as="fetch" crossorigin>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+            <span data-i18n="nav.brand">AVIATION SAFETY</span>
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" class="nav-link active" data-i18n="nav.dashboard">Dashboard</a></li>
+            <li><a href="table.html" class="nav-link" data-i18n="nav.dataTable">Data Table</a></li>
+            <li><a href="rating.html" class="nav-link" data-i18n="nav.airlineRating">Airline Rating</a></li>
+            <li><a href="safety-knowledge.html" class="nav-link" data-i18n="nav.safetyKnowledge">Safety Knowledge</a></li>
+            <li><a href="aircraft-comparison.html" class="nav-link" data-i18n="nav.aircraftCompare">Aircraft Compare</a></li>
+            <li><span class="filter-indicator"></span></li>
+            <li><button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">☾</button></li>
+            <li><button class="lang-switch" id="langSwitch" aria-label="Switch language" data-i18n="lang.switch">中文</button></li>
+        </ul>
+        <button class="nav-hamburger" aria-label="Menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    <div class="nav-overlay"></div>
+    
+    <!-- Filter Panel -->
+    <div class="filter-panel">
+        <div class="filter-content">
+            <div class="filter-group">
+                <label data-i18n="filter.region">Region</label>
+                <select id="filter-region" multiple size="3"></select>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.yearRange">Year Range</label>
+                <div class="range-slider">
+                    <input type="range" id="year-min">
+                    <span class="range-value" id="year-min-val">1940</span>
+                </div>
+                <div class="range-slider">
+                    <input type="range" id="year-max">
+                    <span class="range-value" id="year-max-val">2024</span>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.airline">Airline</label>
+                <select id="filter-airline" multiple size="3"></select>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.aircraft">Aircraft</label>
+                <select id="filter-aircraft" multiple size="3"></select>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.accidentCause">Accident Cause</label>
+                <div class="tag-filters" id="filter-causes"></div>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.flightPhase">Flight Phase</label>
+                <div class="tag-filters" id="filter-phases"></div>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.fatalityRange">Fatality Range</label>
+                <div class="range-slider">
+                    <input type="range" id="fat-min">
+                    <span class="range-value" id="fat-min-val">0</span>
+                </div>
+                <div class="range-slider">
+                    <input type="range" id="fat-max">
+                    <span class="range-value" id="fat-max-val">500</span>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.keywordSearch">Keyword Search</label>
+                <input type="text" id="filter-keyword" placeholder="Search flights, locations..." data-i18n-ph="filter.keywordPlaceholder">
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-danger" id="filter-reset" data-i18n="filter.resetAll">Reset All</button>
+                <button class="btn btn-primary" id="filter-apply" data-i18n="filter.applyFilter">Apply Filter</button>
+            </div>
+        </div>
+    </div>
+    <button class="filter-toggle"><span data-i18n="filter.advancedFilters">ADVANCED FILTERS</span> <span class="arrow">▼</span></button>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header page-header-dashboard">
+            <h1 class="page-title glitch-text" data-text="ACCIDENT OVERVIEW" data-i18n-glitch="page.accidentOverview">ACCIDENT OVERVIEW</h1>
+            <p class="page-subtitle" data-i18n="page.accidentOverviewSub">Global aviation safety data visualization & analysis platform</p>
+        </div>
+        
+        <!-- World Map Container -->
+        <div class="earth-container">
+            <div class="earth-overlay">
+                <div class="earth-title" data-i18n="map.title">GLOBAL INCIDENT MAP</div>
+                <div class="earth-subtitle" data-i18n="map.subtitle">Scroll to zoom · Drag to pan · Hover for details</div>
+            </div>
+            <div class="map-skeleton" id="mapSkeleton">
+                <div class="skeleton-grid"></div>
+                <div class="skeleton-globe"></div>
+                <div class="skeleton-loading-text">
+                    <span data-i18n="map.loading">Loading world map</span><span class="skeleton-loading-dots"></span>
+                </div>
+            </div>
+            <canvas class="earth-canvas" id="earthCanvas"></canvas>
+            <div class="map-controls">
+                <button class="map-btn" id="mapZoomIn" title="Zoom in" data-i18n-title="map.zoomIn">+</button>
+                <button class="map-btn" id="mapZoomOut" title="Zoom out" data-i18n-title="map.zoomOut">−</button>
+                <button class="map-btn" id="mapReset" title="Reset view" data-i18n-title="map.resetView">⟲</button>
+            </div>
+            <div class="map-zoom-indicator" id="mapZoomIndicator">1.0x</div>
+        </div>
+        
+        <!-- Quick Stats Bar -->
+        <div class="quick-stats">
+            <div class="quick-stat">
+                <span class="quick-stat-label" data-i18n="stats.dataRange">Data Range</span>
+                <span class="quick-stat-value" id="stat-range">1974 - 2025</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label" data-i18n="stats.regionsCovered">Regions Covered</span>
+                <span class="quick-stat-value" id="stat-regions">6</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label" data-i18n="stats.airlinesTracked">Airlines Tracked</span>
+                <span class="quick-stat-value" id="stat-airlines">20+</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label" data-i18n="stats.aircraftTypes">Aircraft Types</span>
+                <span class="quick-stat-value" id="stat-aircraft">15+</span>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card stat-card-bg stat-bg-accidents">
+                <div class="stat-icon">✈</div>
+                <div class="stat-label" data-i18n="card.totalAccidents">Total Accidents</div>
+                <div class="stat-value" id="stat-total-accidents">0</div>
+                <div class="stat-sub" data-i18n="card.recordedIncidents">Recorded incidents</div>
+            </div>
+            <div class="stat-card stat-card-bg stat-bg-fatalities">
+                <div class="stat-icon">☠</div>
+                <div class="stat-label" data-i18n="card.totalFatalities">Total Fatalities</div>
+                <div class="stat-value danger" id="stat-total-fatalities">0</div>
+                <div class="stat-sub" data-i18n="card.cumulativeDeaths">Cumulative deaths</div>
+            </div>
+            <div class="stat-card stat-card-bg stat-bg-safest">
+                <div class="stat-icon">◈</div>
+                <div class="stat-label" data-i18n="card.safestYear">Safest Year</div>
+                <div class="stat-value success" id="stat-safest-year">--</div>
+                <div class="stat-sub" data-i18n="card.lowestAccidentCount">Lowest accident count</div>
+            </div>
+            <div class="stat-card stat-card-bg stat-bg-risk">
+                <div class="stat-icon">⚠</div>
+                <div class="stat-label" data-i18n="card.highRiskAirline">High Risk Airline</div>
+                <div class="stat-value warning" id="stat-high-risk">--</div>
+                <div class="stat-sub" data-i18n="card.mostIncidents">Most incidents</div>
+            </div>
+        </div>
+        
+        <!-- Charts Row 1 -->
+        <div class="charts-grid">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="chart.accidentTrend">Accident Trend</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="chart.causeDistribution">Cause Distribution</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="causeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chart Divider 1 -->
+        <div class="chart-divider" style="background-image: url('images/divider-1.jpg');"></div>
+        
+        <!-- Charts Row 2 -->
+        <div class="charts-grid row-2">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="chart.fatalitiesByAirline">Fatalities by Airline (Top 10)</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="fatalityChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="chart.regionalDistribution">Regional Distribution</span>
+                </div>
+                <div class="region-list" id="regionList"></div>
+            </div>
+        </div>
+        
+        <!-- Chart Divider 2 -->
+        <div class="chart-divider" style="background-image: url('images/divider-2.jpg');"></div>
+        
+        <!-- Charts Row 3 -->
+        <div class="charts-grid row-2">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="chart.flightPhaseAnalysis">Flight Phase Analysis</span>
+                </div>
+                <div class="phase-grid" id="phaseGrid"></div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="chart.survivalRateOverview">Survival Rate Overview</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="survivalChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Divider 3 -->
+        <div class="chart-divider" style="background-image: url('images/divider-3.jpeg');"></div>
+
+        <!-- Data Source -->
+        <div class="data-source-section">
+            <div class="data-source-title" data-i18n="dataSource.title">Data Sources</div>
+            <div class="data-source-list">
+                <a href="https://aviation-safety.net" target="_blank" rel="noopener" class="data-source-item">
+                    <span class="data-source-icon">◇</span>
+                    <span class="data-source-name">Aviation Safety Network (ASN)</span>
+                    <span class="data-source-desc" data-i18n="dataSource.asnDesc">Accident database & statistics</span>
+                </a>
+                <a href="https://www.ntsb.gov" target="_blank" rel="noopener" class="data-source-item">
+                    <span class="data-source-icon">◎</span>
+                    <span class="data-source-name">NTSB</span>
+                    <span class="data-source-desc" data-i18n="dataSource.ntsbDesc">Aviation accident investigations</span>
+                </a>
+                <a href="https://www.icao.int" target="_blank" rel="noopener" class="data-source-item">
+                    <span class="data-source-icon">✈</span>
+                    <span class="data-source-name">ICAO</span>
+                    <span class="data-source-desc" data-i18n="dataSource.icaoDesc">Global aviation standards & data</span>
+                </a>
+                <a href="https://www.bea.aero" target="_blank" rel="noopener" class="data-source-item">
+                    <span class="data-source-icon">◉</span>
+                    <span class="data-source-name">BEA</span>
+                    <span class="data-source-desc" data-i18n="dataSource.beaDesc">Civil aviation safety investigations</span>
+                </a>
+                <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener" class="data-source-item">
+                    <span class="data-source-icon">🌐</span>
+                    <span class="data-source-name">Natural Earth</span>
+                    <span class="data-source-desc" data-i18n="dataSource.neDesc">Map vector data (public domain)</span>
+                </a>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Scripts -->
+    <script src="js/common.js" defer></script>
+    <script src="js/local-database.js" defer></script>
+    <script src="js/data-loader.js" defer></script>
+    <script src="js/dashboard.js" defer></script>
+</body>
+</html>

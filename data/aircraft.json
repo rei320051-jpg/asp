@@ -1,0 +1,272 @@
+[
+  {
+    "model": "Boeing 737-800",
+    "manufacturer": "Boeing",
+    "firstFlight": 1997,
+    "totalBuilt": 5200,
+    "accidents": 24,
+    "hullLosses": 18,
+    "fatalityRate": 0.24
+  },
+  {
+    "model": "Boeing 737 MAX 8",
+    "manufacturer": "Boeing",
+    "firstFlight": 2016,
+    "totalBuilt": 600,
+    "accidents": 2,
+    "hullLosses": 2,
+    "fatalityRate": 3.08
+  },
+  {
+    "model": "Boeing 737 MAX 9",
+    "manufacturer": "Boeing",
+    "firstFlight": 2017,
+    "totalBuilt": 250,
+    "accidents": 1,
+    "hullLosses": 0,
+    "fatalityRate": 0.0
+  },
+  {
+    "model": "Boeing 777-200",
+    "manufacturer": "Boeing",
+    "firstFlight": 1994,
+    "totalBuilt": 880,
+    "accidents": 8,
+    "hullLosses": 5,
+    "fatalityRate": 0.18
+  },
+  {
+    "model": "Boeing 777-300ER",
+    "manufacturer": "Boeing",
+    "firstFlight": 2003,
+    "totalBuilt": 830,
+    "accidents": 3,
+    "hullLosses": 2,
+    "fatalityRate": 0.08
+  },
+  {
+    "model": "Boeing 757-200F",
+    "manufacturer": "Boeing",
+    "firstFlight": 1982,
+    "totalBuilt": 1050,
+    "accidents": 15,
+    "hullLosses": 12,
+    "fatalityRate": 0.32
+  },
+  {
+    "model": "Boeing 737-900ER",
+    "manufacturer": "Boeing",
+    "firstFlight": 2006,
+    "totalBuilt": 520,
+    "accidents": 3,
+    "hullLosses": 2,
+    "fatalityRate": 0.12
+  },
+  {
+    "model": "Boeing 737-200",
+    "manufacturer": "Boeing",
+    "firstFlight": 1967,
+    "totalBuilt": 1114,
+    "accidents": 320,
+    "hullLosses": 280,
+    "fatalityRate": 1.56
+  },
+  {
+    "model": "Airbus A320",
+    "manufacturer": "Airbus",
+    "firstFlight": 1987,
+    "totalBuilt": 4800,
+    "accidents": 32,
+    "hullLosses": 24,
+    "fatalityRate": 0.21
+  },
+  {
+    "model": "Airbus A320neo",
+    "manufacturer": "Airbus",
+    "firstFlight": 2014,
+    "totalBuilt": 1950,
+    "accidents": 3,
+    "hullLosses": 2,
+    "fatalityRate": 0.06
+  },
+  {
+    "model": "Airbus A321",
+    "manufacturer": "Airbus",
+    "firstFlight": 1993,
+    "totalBuilt": 2400,
+    "accidents": 8,
+    "hullLosses": 5,
+    "fatalityRate": 0.11
+  },
+  {
+    "model": "Airbus A330-200",
+    "manufacturer": "Airbus",
+    "firstFlight": 1997,
+    "totalBuilt": 660,
+    "accidents": 6,
+    "hullLosses": 4,
+    "fatalityRate": 0.34
+  },
+  {
+    "model": "Airbus A330-300",
+    "manufacturer": "Airbus",
+    "firstFlight": 1992,
+    "totalBuilt": 780,
+    "accidents": 5,
+    "hullLosses": 3,
+    "fatalityRate": 0.15
+  },
+  {
+    "model": "Airbus A380-800",
+    "manufacturer": "Airbus",
+    "firstFlight": 2005,
+    "totalBuilt": 251,
+    "accidents": 1,
+    "hullLosses": 0,
+    "fatalityRate": 0.0
+  },
+  {
+    "model": "Bombardier CRJ-200",
+    "manufacturer": "Bombardier",
+    "firstFlight": 1991,
+    "totalBuilt": 1021,
+    "accidents": 28,
+    "hullLosses": 22,
+    "fatalityRate": 0.45
+  },
+  {
+    "model": "Embraer 190",
+    "manufacturer": "Embraer",
+    "firstFlight": 2002,
+    "totalBuilt": 1600,
+    "accidents": 7,
+    "hullLosses": 4,
+    "fatalityRate": 0.09
+  },
+  {
+    "model": "de Havilland Twin Otter",
+    "manufacturer": "de Havilland",
+    "firstFlight": 1965,
+    "totalBuilt": 990,
+    "accidents": 120,
+    "hullLosses": 95,
+    "fatalityRate": 1.85
+  },
+  {
+    "model": "Antonov An-12",
+    "manufacturer": "Antonov",
+    "firstFlight": 1957,
+    "totalBuilt": 1248,
+    "accidents": 180,
+    "hullLosses": 165,
+    "fatalityRate": 2.1
+  },
+  {
+    "model": "Antonov An-148",
+    "manufacturer": "Antonov",
+    "firstFlight": 2004,
+    "totalBuilt": 42,
+    "accidents": 2,
+    "hullLosses": 2,
+    "fatalityRate": 3.2
+  },
+  {
+    "model": "Fokker 100",
+    "manufacturer": "Fokker",
+    "firstFlight": 1986,
+    "totalBuilt": 283,
+    "accidents": 12,
+    "hullLosses": 9,
+    "fatalityRate": 0.75
+  },
+  {
+    "model": "COMAC C919",
+    "manufacturer": "COMAC",
+    "firstFlight": 2017,
+    "totalBuilt": 8,
+    "accidents": 0,
+    "hullLosses": 0,
+    "fatalityRate": 0.0
+  },
+  {
+    "model": "COMAC ARJ21",
+    "manufacturer": "COMAC",
+    "firstFlight": 2008,
+    "totalBuilt": 130,
+    "accidents": 0,
+    "hullLosses": 0,
+    "fatalityRate": 0.0
+  },
+  {
+    "model": "Boeing 787-9 Dreamliner",
+    "manufacturer": "Boeing",
+    "firstFlight": 2013,
+    "totalBuilt": 1100,
+    "accidents": 2,
+    "hullLosses": 0,
+    "fatalityRate": 0.0
+  },
+  {
+    "model": "Boeing 747-400",
+    "manufacturer": "Boeing",
+    "firstFlight": 1988,
+    "totalBuilt": 694,
+    "accidents": 16,
+    "hullLosses": 8,
+    "fatalityRate": 0.12
+  },
+  {
+    "model": "Airbus A350-900",
+    "manufacturer": "Airbus",
+    "firstFlight": 2013,
+    "totalBuilt": 480,
+    "accidents": 1,
+    "hullLosses": 0,
+    "fatalityRate": 0.0
+  },
+  {
+    "model": "Airbus A310-300",
+    "manufacturer": "Airbus",
+    "firstFlight": 1982,
+    "totalBuilt": 255,
+    "accidents": 9,
+    "hullLosses": 6,
+    "fatalityRate": 0.31
+  },
+  {
+    "model": "Sukhoi Superjet 100",
+    "manufacturer": "Sukhoi",
+    "firstFlight": 2008,
+    "totalBuilt": 170,
+    "accidents": 2,
+    "hullLosses": 2,
+    "fatalityRate": 0.59
+  },
+  {
+    "model": "ATR 72-600",
+    "manufacturer": "ATR",
+    "firstFlight": 1988,
+    "totalBuilt": 500,
+    "accidents": 10,
+    "hullLosses": 8,
+    "fatalityRate": 0.80
+  },
+  {
+    "model": "Bombardier Q400",
+    "manufacturer": "Bombardier",
+    "firstFlight": 1998,
+    "totalBuilt": 650,
+    "accidents": 5,
+    "hullLosses": 3,
+    "fatalityRate": 0.15
+  },
+  {
+    "model": "Embraer E195",
+    "manufacturer": "Embraer",
+    "firstFlight": 2004,
+    "totalBuilt": 300,
+    "accidents": 3,
+    "hullLosses": 1,
+    "fatalityRate": 0.10
+  }
+]

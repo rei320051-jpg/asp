@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n-title="pageTitleRating">Aviation Safety Analytics | Airline Rating</title>
+    
+    <!-- Chart.js -->
+    <script src="lib/chart.umd.min.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/rating.css">
+</head>
+<body>
+    <div class="bg-grid"></div>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+            <span data-i18n="nav.brand">AVIATION SAFETY</span>
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" class="nav-link" data-i18n="nav.dashboard">Dashboard</a></li>
+            <li><a href="table.html" class="nav-link" data-i18n="nav.dataTable">Data Table</a></li>
+            <li><a href="rating.html" class="nav-link active" data-i18n="nav.airlineRating">Airline Rating</a></li>
+            <li><a href="safety-knowledge.html" class="nav-link" data-i18n="nav.safetyKnowledge">Safety Knowledge</a></li>
+            <li><a href="aircraft-comparison.html" class="nav-link" data-i18n="nav.aircraftCompare">Aircraft Compare</a></li>
+            
+            <li><button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">☾</button></li>
+            <li><button class="lang-switch" id="langSwitch" aria-label="Switch language" data-i18n="lang.switch">中文</button></li>
+        </ul>
+        <button class="nav-hamburger" aria-label="Menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    <div class="nav-overlay"></div>
+    
+    
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header page-header-rating">
+            <h1 class="page-title glitch-text" data-text="AIRLINE SAFETY RATING" data-i18n-glitch="page.airlineSafetyRating">AIRLINE SAFETY RATING</h1>
+            <p class="page-subtitle" data-i18n="page.airlineSafetyRatingSub">Comprehensive safety rankings and multi-dimensional comparison</p>
+        </div>
+        
+        <!-- Radar Comparison Section -->
+        <div class="radar-section">
+            <div class="card radar-chart-card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="rating.multiDimensionalComparison">Multi-Dimensional Safety Comparison</span>
+                </div>
+                <div class="chart-container radar-container">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+            <div class="card airline-selector">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="rating.selectAirlines">Select Airlines to Compare</span>
+                    <span class="card-subtitle" data-i18n="rating.maxAirline">Max 5 airlines</span>
+                </div>
+                <div class="airline-list" id="airlineList">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rating Table -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title" data-i18n="rating.safetyRankings">Safety Rankings</span>
+                <span class="card-subtitle" data-i18n="rating.basedOnMetrics">Based on comprehensive safety metrics</span>
+            </div>
+            <div class="table-container">
+                <table class="rating-table">
+                    <thead>
+                        <tr>
+                            <th data-i18n="rating.rank">Rank</th>
+                            <th data-i18n="rating.airline">Airline</th>
+                            <th data-i18n="rating.country">Country</th>
+                            <th data-i18n="rating.safetyScore">Safety Score</th>
+                            <th data-i18n="rating.accidents">Accidents</th>
+                            <th data-i18n="rating.fatalities">Fatalities</th>
+                            <th data-i18n="rating.iosaCertified">IOSA Certified</th>
+                            <th data-i18n="rating.trend">Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ratingTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Aircraft Safety Section -->
+        <div class="aircraft-section">
+            <div class="aircraft-section-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title" data-i18n="rating.aircraftFatalityRate">Aircraft Fatality Rate by Model</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="aircraftChart"></canvas>
+                    </div>
+                </div>
+                <div class="aircraft-image-card">
+                    <img src="images/aircraft-comparison.jpg" alt="Aircraft Comparison" loading="lazy" data-i18n-alt="rating.aircraftComparison">
+                    <div class="aircraft-image-caption" data-i18n="rating.aircraftComparisonDesc">Modern commercial airliners comparison</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- External Resources -->
+        <div class="external-resources">
+            <h3 class="section-title" data-i18n="rating.externalResources">External Safety Resources</h3>
+            <div class="resource-grid">
+                <a href="https://www.icao.int" target="_blank" class="resource-card">
+                    <div class="resource-icon">✈</div>
+                    <div class="resource-title">ICAO</div>
+                    <div class="resource-desc" data-i18n="rating.icaoDesc">International Civil Aviation Organization</div>
+                </a>
+                <a href="https://www.iasa.com" target="_blank" class="resource-card">
+                    <div class="resource-icon">◈</div>
+                    <div class="resource-title">IASA</div>
+                    <div class="resource-desc" data-i18n="rating.iasaDesc">International Aviation Safety Assessment</div>
+                </a>
+                <a href="https://www.airsafe.com" target="_blank" class="resource-card">
+                    <div class="resource-icon">⚠</div>
+                    <div class="resource-title">AirSafe</div>
+                    <div class="resource-desc" data-i18n="rating.airsafeDesc">Airline Safety & Fatal Event Rates</div>
+                </a>
+                <a href="https://www.ntsb.gov" target="_blank" class="resource-card">
+                    <div class="resource-icon">◎</div>
+                    <div class="resource-title">NTSB</div>
+                    <div class="resource-desc" data-i18n="rating.ntsbDesc">National Transportation Safety Board</div>
+                </a>
+                <a href="https://www.bea.aero" target="_blank" class="resource-card">
+                    <div class="resource-icon">◉</div>
+                    <div class="resource-title">BEA</div>
+                    <div class="resource-desc" data-i18n="rating.beaDesc">Bureau of Enquiry & Analysis for Civil Aviation</div>
+                </a>
+                <a href="https://aviation-safety.net" target="_blank" class="resource-card">
+                    <div class="resource-icon">◇</div>
+                    <div class="resource-title">ASN</div>
+                    <div class="resource-desc" data-i18n="rating.asnDesc">Aviation Safety Network Database</div>
+                </a>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Scripts -->
+    <script src="js/common.js"></script>
+    <script src="js/local-database.js"></script>
+    <script src="js/data-loader.js"></script>
+    <script src="js/rating.js"></script>
+</body>
+</html>

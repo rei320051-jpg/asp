@@ -1,0 +1,496 @@
+/* ===== Rating Page Styles ===== */
+/* Radar Chart Section */
+.radar-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+.radar-chart-card {
+    padding: 1.5rem;
+}
+.radar-container {
+    position: relative;
+    height: clamp(320px, 35vh, 450px);
+}
+.radar-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+/* Airline Selector */
+.airline-selector {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+}
+.airline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+.airline-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+.airline-checkbox:hover {
+    border-color: var(--color-primary);
+}
+.airline-checkbox input[type="checkbox"] {
+    display: none;
+}
+.checkbox-custom {
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.2s ease;
+    border-radius: 3px;
+}
+.airline-checkbox input[type="checkbox"]:checked + .checkbox-custom {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2);
+}
+.airline-checkbox input[type="checkbox"]:checked + .checkbox-custom::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: bold;
+}
+.airline-checkbox .airline-name {
+    flex: 1;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.airline-checkbox .airline-score {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-width: 35px;
+    text-align: right;
+}
+.airline-score.excellent { color: #059669; }
+.airline-score.good { color: var(--color-accent); }
+.airline-score.poor { color: var(--color-secondary); }
+.airline-checkbox input[type="checkbox"]:checked ~ .airline-name {
+    color: var(--text-primary);
+}
+/* Rating Table */
+.rating-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.rating-table thead th {
+    background: var(--bg-secondary);
+    padding: 0.875rem 1rem;
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-color);
+}
+.rating-table tbody tr {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+.rating-table tbody tr:hover {
+    background: rgba(0, 102, 204, 0.04);
+}
+.rating-table td {
+    padding: 0.875rem 1rem;
+    color: var(--text-secondary);
+}
+.airline-name-cell strong {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+.airline-founded {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+/* Rank Badge */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 1px solid;
+}
+.rank-badge.top-1 {
+    color: #b45309;
+    border-color: #fcd34d;
+    background: rgba(255, 215, 0, 0.12);
+    box-shadow: none;
+}
+.rank-badge.top-2 {
+    color: #6b7280;
+    border-color: #d1d5db;
+    background: rgba(192, 192, 192, 0.12);
+}
+.rank-badge.top-3 {
+    color: #92400e;
+    border-color: #d6b08a;
+    background: rgba(205, 127, 50, 0.12);
+}
+.rank-badge.normal {
+    color: var(--text-muted);
+    border-color: var(--border-color);
+}
+/* Safety Score Bar */
+.score-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.score-bar-container {
+    flex: 1;
+    height: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    position: relative;
+    max-width: 120px;
+    border-radius: 4px;
+}
+.score-bar {
+    height: 100%;
+    transition: width 0.8s ease;
+    border-radius: 4px;
+}
+.score-bar.excellent {
+    background: #059669;
+    box-shadow: none;
+}
+.score-bar.good {
+    background: var(--color-accent);
+    box-shadow: none;
+}
+.score-bar.poor {
+    background: var(--color-secondary);
+    box-shadow: none;
+}
+.score-value {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-width: 35px;
+}
+.score-value.excellent { color: #059669; }
+.score-value.good { color: var(--color-accent); }
+.score-value.poor { color: var(--color-secondary); }
+/* IOSA Badge */
+.iosa-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-family: var(--font-display);
+    letter-spacing: 0.5px;
+    border: 1px solid;
+    border-radius: 4px;
+}
+.iosa-badge.certified {
+    color: #059669;
+    border-color: #a7f3d0;
+    background: rgba(5, 150, 105, 0.08);
+}
+.iosa-badge.not-certified {
+    color: var(--text-muted);
+    border-color: var(--border-color);
+    background: transparent;
+    opacity: 0.6;
+}
+/* Trend Indicator */
+.trend-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-family: var(--font-display);
+}
+.trend-indicator.improving {
+    color: #059669;
+}
+.trend-indicator.stable {
+    color: var(--text-muted);
+}
+.trend-indicator.declining {
+    color: var(--color-secondary);
+}
+/* Aircraft Section */
+.aircraft-section {
+    margin-bottom: 2rem;
+}
+.aircraft-section-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+}
+.aircraft-image-card {
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.aircraft-image-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    flex: 1;
+}
+.aircraft-image-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(to top, rgba(10, 25, 47, 0.85), transparent);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+/* Airline Logo Icon */
+.airline-logo-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    padding: 4px;
+    box-sizing: border-box;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-color);
+}
+/* Airline IATA code badge */
+.airline-iata-code {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.4rem;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    background: rgba(0, 102, 204, 0.08);
+    border: 1px solid rgba(0, 102, 204, 0.2);
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+}
+.airline-name-cell {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+}
+.airline-name-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+/* Airline Website Link */
+.airline-website-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+.airline-website-link:hover {
+    background: rgba(0, 102, 204, 0.06);
+}
+.airline-website-link:hover .airline-logo-icon {
+    opacity: 1;
+    transform: scale(1.05);
+}
+.airline-website-link:hover strong {
+    color: var(--color-primary);
+}
+.airline-logo-icon {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.external-link-icon {
+    display: inline-block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-left: 0.2rem;
+    transition: color 0.2s ease;
+    vertical-align: top;
+}
+.airline-website-link:hover .external-link-icon {
+    color: var(--color-primary);
+}
+/* External Resources Section */
+.external-resources {
+    margin-top: 2rem;
+}
+.section-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+}
+.section-title::before {
+    content: '// ';
+    color: var(--color-primary);
+}
+.resource-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+.resource-card {
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: block;
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--card-radius);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.resource-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--color-primary);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.resource-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.12);
+    transform: translateY(-2px);
+}
+.resource-card:hover::before {
+    opacity: 1;
+}
+.resource-icon {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    background: rgba(0, 102, 204, 0.05);
+}
+.resource-title {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+}
+.resource-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+/* Responsive */
+@media (max-width: 1279px) {
+    .radar-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .resource-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 768px) {
+    .radar-container {
+        height: clamp(260px, 30vh, 320px);
+    }
+    
+    .score-cell {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+    }
+    
+    .resource-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .rating-table {
+        min-width: 700px;
+    }
+    .aircraft-section-grid {
+        grid-template-columns: 1fr;
+    }
+    .aircraft-image-card {
+        display: none;
+    }
+}
+/* ===== Dark Mode Overrides ===== */
+[data-theme="dark"] .resource-card,
+[data-theme="dark"] .aircraft-image-card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .airline-logo-icon {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+[data-theme="dark"] .rating-table {
+    color: var(--text-primary);
+}
+[data-theme="dark"] .rating-table thead th {
+    background: var(--bg-secondary);
+}
+[data-theme="dark"] .rating-table tbody tr:hover {
+    background: rgba(77, 159, 255, 0.08);
+}
+

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n-title="pageTitleCompare">Aviation Safety Analytics | Aircraft Comparison</title>
+    <script src="lib/chart.umd.min.js" defer></script>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/aircraft-comparison.css">
+</head>
+<body>
+    <div class="bg-grid"></div>
+    
+    <!-- Image Lightbox -->
+    <div class="image-lightbox" id="imageLightbox">
+        <div class="lightbox-content">
+            <img src="" alt="Aircraft" class="lightbox-image" id="lightboxImage">
+            <div class="lightbox-loading" id="lightboxLoading">
+                <div class="loading-spinner"></div>
+            </div>
+            <button class="lightbox-close" id="lightboxClose">×</button>
+            <button class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous image">‹</button>
+            <button class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next image">›</button>
+            <div class="lightbox-zoom-controls">
+                <button class="zoom-btn" id="zoomIn" aria-label="Zoom in">+</button>
+                <div class="zoom-slider-container">
+                    <input type="range" id="zoomSlider" min="50" max="500" value="100" step="10">
+                </div>
+                <button class="zoom-btn" id="zoomOut" aria-label="Zoom out">−</button>
+                <button class="zoom-btn zoom-reset" id="zoomReset" aria-label="Reset zoom">1:1</button>
+            </div>
+            <div class="lightbox-info">
+                <span id="lightboxTitle">Aircraft Image</span>
+                <span id="lightboxResolution"></span>
+                <span id="lightboxZoom">100%</span>
+            </div>
+        </div>
+    </div>
+    
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+            <span data-i18n="nav.brand">AVIATION SAFETY</span>
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" class="nav-link" data-i18n="nav.dashboard">Dashboard</a></li>
+            <li><a href="table.html" class="nav-link" data-i18n="nav.dataTable">Data Table</a></li>
+            <li><a href="rating.html" class="nav-link" data-i18n="nav.airlineRating">Airline Rating</a></li>
+            <li><a href="safety-knowledge.html" class="nav-link" data-i18n="nav.safetyKnowledge">Safety Knowledge</a></li>
+            <li><a href="aircraft-comparison.html" class="nav-link active" data-i18n="nav.aircraftCompare">Aircraft Compare</a></li>
+            <li><span class="filter-indicator"></span></li>
+            <li><button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">☾</button></li>
+            <li><button class="lang-switch" id="langSwitch" aria-label="Switch language" data-i18n="lang.switch">中文</button></li>
+        </ul>
+        <button class="nav-hamburger" aria-label="Menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    <div class="nav-overlay"></div>
+    <!-- 此页面不需要筛选面板 -->
+    <main class="main-content">
+        <div class="page-header page-header-compare">
+            <h1 class="page-title glitch-text" data-text="AIRCRAFT COMPARISON" data-i18n-glitch="page.aircraftComparison">AIRCRAFT COMPARISON</h1>
+            <p class="page-subtitle" data-i18n="page.aircraftComparisonSub">Comparative analysis of aircraft type safety performance</p>
+        </div>
+
+        <div class="compare-container">
+            <!-- Aircraft Selector -->
+            <div class="card selector-section">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="compare.selectAircraft">Select Aircraft to Compare</span>
+                </div>
+                <div class="selector-grid">
+                    <div class="aircraft-selector">
+                        <label data-i18n="compare.aircraftA">Aircraft A</label>
+                        <select id="aircraft-a"></select>
+                    </div>
+                    <div class="vs-badge">VS</div>
+                    <div class="aircraft-selector">
+                        <label data-i18n="compare.aircraftB">Aircraft B</label>
+                        <select id="aircraft-b"></select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Overview -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="compare.overview">Comparison Overview</span>
+                </div>
+                <div class="compare-overview" id="compareOverview"></div>
+            </div>
+
+            <!-- Radar Chart -->
+            <div class="card chart-section">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="compare.radarTitle">Multi-Dimensional Radar Comparison</span>
+                    <span class="card-subtitle" data-i18n="compare.radarSubtitle">Normalized metrics across 5 dimensions</span>
+                </div>
+                <div class="chart-container radar-container">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bar Chart -->
+            <div class="card chart-section">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="compare.barTitle">Accidents & Hull Losses Comparison</span>
+                    <span class="card-subtitle" data-i18n="compare.barSubtitle">Side-by-side accident statistics</span>
+                </div>
+                <div class="chart-container bar-container">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Accident List -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="compare.accidentListTitle">Major Accidents</span>
+                    <span class="card-subtitle" data-i18n="compare.accidentListSubtitle">Top 5 accidents by fatalities</span>
+                </div>
+                <div class="accident-list" id="accidentList"></div>
+            </div>
+        </div>
+    </main>
+    <script src="js/common.js" defer></script>
+    <script src="js/local-database.js" defer></script>
+    <script src="js/data-loader.js" defer></script>
+    <script src="js/aircraft-comparison.js" defer></script>
+</body>
+</html>

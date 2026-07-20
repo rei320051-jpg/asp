@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n-title="pageTitleTable">Aviation Safety Analytics | Data Table</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/table.css">
+</head>
+<body>
+    <div class="bg-grid"></div>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+            <span data-i18n="nav.brand">AVIATION SAFETY</span>
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" class="nav-link" data-i18n="nav.dashboard">Dashboard</a></li>
+            <li><a href="table.html" class="nav-link active" data-i18n="nav.dataTable">Data Table</a></li>
+            <li><a href="rating.html" class="nav-link" data-i18n="nav.airlineRating">Airline Rating</a></li>
+            <li><a href="safety-knowledge.html" class="nav-link" data-i18n="nav.safetyKnowledge">Safety Knowledge</a></li>
+            <li><a href="aircraft-comparison.html" class="nav-link" data-i18n="nav.aircraftCompare">Aircraft Compare</a></li>
+            <li><span class="filter-indicator"></span></li>
+            <li><button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">☾</button></li>
+            <li><button class="lang-switch" id="langSwitch" aria-label="Switch language" data-i18n="lang.switch">中文</button></li>
+        </ul>
+        <button class="nav-hamburger" aria-label="Menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    <div class="nav-overlay"></div>
+    
+    <!-- Filter Panel -->
+    <div class="filter-panel">
+        <div class="filter-content">
+            <div class="filter-group">
+                <label data-i18n="filter.region">Region</label>
+                <select id="filter-region" multiple size="3"></select>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.yearRange">Year Range</label>
+                <div class="range-slider">
+                    <input type="range" id="year-min">
+                    <span class="range-value" id="year-min-val">1940</span>
+                </div>
+                <div class="range-slider">
+                    <input type="range" id="year-max">
+                    <span class="range-value" id="year-max-val">2024</span>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.airline">Airline</label>
+                <select id="filter-airline" multiple size="3"></select>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.aircraft">Aircraft</label>
+                <select id="filter-aircraft" multiple size="3"></select>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.accidentCause">Accident Cause</label>
+                <div class="tag-filters" id="filter-causes"></div>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.flightPhase">Flight Phase</label>
+                <div class="tag-filters" id="filter-phases"></div>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.fatalityRange">Fatality Range</label>
+                <div class="range-slider">
+                    <input type="range" id="fat-min">
+                    <span class="range-value" id="fat-min-val">0</span>
+                </div>
+                <div class="range-slider">
+                    <input type="range" id="fat-max">
+                    <span class="range-value" id="fat-max-val">500</span>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label data-i18n="filter.keywordSearch">Keyword Search</label>
+                <input type="text" id="filter-keyword" placeholder="Search flights, locations..." data-i18n-ph="filter.keywordPlaceholder">
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-danger" id="filter-reset" data-i18n="filter.resetAll">Reset All</button>
+                <button class="btn btn-primary" id="filter-apply" data-i18n="filter.applyFilter">Apply Filter</button>
+            </div>
+        </div>
+    </div>
+    <button class="filter-toggle"><span data-i18n="filter.advancedFilters">ADVANCED FILTERS</span> <span class="arrow">▼</span></button>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header page-header-table">
+            <h1 class="page-title glitch-text" data-text="ACCIDENT DATABASE" data-i18n-glitch="page.accidentDatabase">ACCIDENT DATABASE</h1>
+            <p class="page-subtitle" data-i18n="page.accidentDatabaseSub">Comprehensive aviation accident records with detailed information</p>
+        </div>
+        
+        <!-- Table Toolbar -->
+        <div class="table-toolbar">
+            <div class="search-box">
+                <input type="text" id="table-search" placeholder="Quick search: airline, flight, location..." data-i18n-ph="table.quickSearch">
+            </div>
+            <div class="toolbar-actions">
+                <span class="result-count" id="resultCount">0 <span data-i18n="table.records">records</span></span>
+                <div class="export-dropdown">
+                <button class="btn" id="exportBtn">
+                    <span data-i18n="table.export">Export</span>
+                    <span class="export-arrow">▼</span>
+                </button>
+                <div class="export-menu">
+                    <button class="export-option" data-format="csv" data-i18n="table.exportCsv">Export CSV</button>
+                    <button class="export-option" data-format="excel" data-i18n="table.exportExcel">Export Excel</button>
+                    <button class="export-option" data-format="json" data-i18n="table.exportJson">Export JSON</button>
+                </div>
+            </div>
+            </div>
+        </div>
+        
+        <!-- Data Table -->
+        <div class="card table-card">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="date"><span data-i18n="table.date">Date</span> <span class="sort-arrow">↕</span></th>
+                            <th data-sort="airline"><span data-i18n="table.airline">Airline</span> <span class="sort-arrow">↕</span></th>
+                            <th data-sort="flightNumber"><span data-i18n="table.flight">Flight</span> <span class="sort-arrow">↕</span></th>
+                            <th data-sort="aircraft"><span data-i18n="table.aircraft">Aircraft</span> <span class="sort-arrow">↕</span></th>
+                            <th data-sort="location"><span data-i18n="table.location">Location</span> <span class="sort-arrow">↕</span></th>
+                            <th data-sort="fatalities"><span data-i18n="table.fatalities">Fatalities</span> <span class="sort-arrow">↕</span></th>
+                            <th data-sort="cause"><span data-i18n="table.cause">Cause</span> <span class="sort-arrow">↕</span></th>
+                            <th data-sort="phase"><span data-i18n="table.phase">Phase</span> <span class="sort-arrow">↕</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="pagination">
+                <button class="page-btn" id="prevPage" data-i18n="table.prev">← Prev</button>
+                <div class="page-numbers" id="pageNumbers"></div>
+                <button class="page-btn" id="nextPage" data-i18n="table.next">Next →</button>
+                <select class="page-size" id="pageSize">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Scripts -->
+    <script src="js/common.js"></script>
+    <script src="js/local-database.js"></script>
+    <script src="js/data-loader.js"></script>
+    <script src="js/table.js"></script>
+</body>
+</html>

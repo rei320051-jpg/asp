@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n-title="pageTitleKnowledge">Aviation Safety Analytics | Safety Knowledge</title>
+    
+    <script src="lib/chart.umd.min.js"></script>
+    
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/safety-knowledge.css">
+</head>
+<body>
+    <div class="bg-grid"></div>
+    
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+            <span data-i18n="nav.brand">AVIATION SAFETY</span>
+        </a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" class="nav-link" data-i18n="nav.dashboard">Dashboard</a></li>
+            <li><a href="table.html" class="nav-link" data-i18n="nav.dataTable">Data Table</a></li>
+            <li><a href="rating.html" class="nav-link" data-i18n="nav.airlineRating">Airline Rating</a></li>
+            <li><a href="safety-knowledge.html" class="nav-link active" data-i18n="nav.safetyKnowledge">Safety Knowledge</a></li>
+            <li><a href="aircraft-comparison.html" class="nav-link" data-i18n="nav.aircraftCompare">Aircraft Compare</a></li>
+            <li><span class="filter-indicator"></span></li>
+            <li><button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">☾</button></li>
+            <li><button class="lang-switch" id="langSwitch" aria-label="Switch language" data-i18n="lang.switch">中文</button></li>
+        </ul>
+        <button class="nav-hamburger" aria-label="Menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+    <div class="nav-overlay"></div>
+    
+    <main class="main-content">
+        <div class="page-header page-header-knowledge">
+            <h1 class="page-title glitch-text" data-text="SAFETY KNOWLEDGE" data-i18n-glitch="page.safetyKnowledge">SAFETY KNOWLEDGE</h1>
+            <p class="page-subtitle" data-i18n="page.safetyKnowledgeSub">Comprehensive aviation safety education and awareness</p>
+        </div>
+        
+        <div class="intro-section">
+            <div class="card intro-card">
+                <h2 data-i18n="knowledge.introTitle">Understanding Aviation Safety</h2>
+                <p data-i18n="knowledge.introDesc">Aviation is one of the safest modes of transportation. Learn about safety protocols, emergency procedures, and risk mitigation strategies.</p>
+                <div class="safety-stats-grid">
+                    <div class="stat-card stat-card-blue">
+                        <div class="stat-value">99.9%</div>
+                        <div class="stat-label" data-i18n="knowledge.safetyRate">Safety Rate</div>
+                    </div>
+                    <div class="stat-card stat-card-green">
+                        <div class="stat-value">0.07</div>
+                        <div class="stat-label" data-i18n="knowledge.fatalAccidentsPerMillion">Fatal Accidents per Million Flights</div>
+                    </div>
+                    <div class="stat-card stat-card-purple">
+                        <div class="stat-value">2.4</div>
+                        <div class="stat-label" data-i18n="knowledge.deathsPerBillionMiles">Deaths per Billion Passenger Miles</div>
+                    </div>
+                    <div class="stat-card stat-card-orange">
+                        <div class="stat-value">95%</div>
+                        <div class="stat-label" data-i18n="knowledge.emergencySurvivalRate">Emergency Survival Rate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="cabin-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.cabinSafetyTitle">Cabin Safety</span>
+                    <span class="card-subtitle" data-i18n="knowledge.cabinSafetyDesc">Safety equipment and procedures on board</span>
+                </div>
+                <div class="cabin-tips">
+                    <div class="tip-card">
+                        <div class="tip-icon">✓</div>
+                        <div class="tip-content">
+                            <h4 data-i18n="knowledge.seatbelt">Always Wear Your Seatbelt</h4>
+                            <p data-i18n="knowledge.seatbeltDesc">Keep your seatbelt fastened whenever seated, even when the seatbelt sign is off.</p>
+                        </div>
+                    </div>
+                    <div class="tip-card">
+                        <div class="tip-icon">✓</div>
+                        <div class="tip-content">
+                            <h4 data-i18n="knowledge.carryOn">Secure Carry-on Items</h4>
+                            <p data-i18n="knowledge.carryOnDesc">Loose items can become dangerous projectiles during turbulence.</p>
+                        </div>
+                    </div>
+                    <div class="tip-card">
+                        <div class="tip-icon">✓</div>
+                        <div class="tip-content">
+                            <h4 data-i18n="knowledge.aisle">Keep Aisles Clear</h4>
+                            <p data-i18n="knowledge.aisleDesc">Emergency exits and aisles must remain unobstructed at all times.</p>
+                        </div>
+                    </div>
+                    <div class="tip-card">
+                        <div class="tip-icon">✓</div>
+                        <div class="tip-content">
+                            <h4 data-i18n="knowledge.landing">Prepare for Landing</h4>
+                            <p data-i18n="knowledge.landingDesc">Stow tray tables, raise seat backs, and secure all personal items before landing.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="checklist-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.checklistTitle">Pre-Flight Safety Checklist</span>
+                    <span class="card-subtitle" data-i18n="knowledge.checklistDesc">Before boarding, ensure your safety preparedness</span>
+                </div>
+                <div class="checklist-container">
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check-1">
+                        <label for="check-1">
+                            <span class="check-label" data-i18n="knowledge.check1">Locate your nearest emergency exit</span>
+                            <span class="check-desc" data-i18n="knowledge.check1Desc">Count the rows between you and the exit</span>
+                        </label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check-2">
+                        <label for="check-2">
+                            <span class="check-label" data-i18n="knowledge.check2">Read the safety briefing card</span>
+                            <span class="check-desc" data-i18n="knowledge.check2Desc">Familiarize yourself with safety equipment locations</span>
+                        </label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check-3">
+                        <label for="check-3">
+                            <span class="check-label" data-i18n="knowledge.check3">Secure your personal items</span>
+                            <span class="check-desc" data-i18n="knowledge.check3Desc">Store bags under seats or in overhead bins</span>
+                        </label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check-4">
+                        <label for="check-4">
+                            <span class="check-label" data-i18n="knowledge.check4">Fasten seatbelt correctly</span>
+                            <span class="check-desc" data-i18n="knowledge.check4Desc">Adjust to fit snugly across your lap</span>
+                        </label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check-5">
+                        <label for="check-5">
+                            <span class="check-label" data-i18n="knowledge.check5">Know brace position</span>
+                            <span class="check-desc" data-i18n="knowledge.check5Desc">Practice the brace position before takeoff</span>
+                        </label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" id="check-6">
+                        <label for="check-6">
+                            <span class="check-label" data-i18n="knowledge.check6">Turn on flight mode</span>
+                            <span class="check-desc" data-i18n="knowledge.check6Desc">Prevent potential interference with navigation</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flight-phase-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.flightPhaseTitle">Flight Phase Safety</span>
+                    <span class="card-subtitle" data-i18n="knowledge.flightPhaseDesc">Safety considerations during different flight phases</span>
+                </div>
+                <div class="flight-phases-grid">
+                    <div class="phase-card phase-preflight">
+                        <div class="phase-icon">🔧</div>
+                        <h3 data-i18n="knowledge.preflight">Pre-Flight</h3>
+                        <ul class="phase-list">
+                            <li data-i18n="knowledge.preflight1">Pilot briefings and crew coordination</li>
+                            <li data-i18n="knowledge.preflight2">System checks and weather review</li>
+                            <li data-i18n="knowledge.preflight3">Emergency equipment verification</li>
+                            <li data-i18n="knowledge.preflight4">Passenger safety briefing</li>
+                        </ul>
+                    </div>
+                    <div class="phase-card phase-takeoff">
+                        <div class="phase-icon">✈️</div>
+                        <h3 data-i18n="knowledge.takeoff">Takeoff</h3>
+                        <ul class="phase-list">
+                            <li data-i18n="knowledge.takeoff1">Keep seatbelt fastened until cruising</li>
+                            <li data-i18n="knowledge.takeoff2">Store all loose items securely</li>
+                            <li data-i18n="knowledge.takeoff3">Follow crew instructions immediately</li>
+                            <li data-i18n="knowledge.takeoff4">Be aware of emergency exits</li>
+                        </ul>
+                    </div>
+                    <div class="phase-card phase-cruise">
+                        <div class="phase-icon">☁️</div>
+                        <h3 data-i18n="knowledge.cruise">Cruise</h3>
+                        <ul class="phase-list">
+                            <li data-i18n="knowledge.cruise1">Maintain awareness of exit locations</li>
+                            <li data-i18n="knowledge.cruise2">Keep seatbelt loosely fastened</li>
+                            <li data-i18n="knowledge.cruise3">Follow turbulence procedures</li>
+                            <li data-i18n="knowledge.cruise4">Review safety card if time permits</li>
+                        </ul>
+                    </div>
+                    <div class="phase-card phase-descent">
+                        <div class="phase-icon">⬇️</div>
+                        <h3 data-i18n="knowledge.descent">Descent & Landing</h3>
+                        <ul class="phase-list">
+                            <li data-i18n="knowledge.descent1">Stow tray tables and raise seatbacks</li>
+                            <li data-i18n="knowledge.descent2">Secure all carry-on items</li>
+                            <li data-i18n="knowledge.descent3">Return to seat and fasten seatbelt</li>
+                            <li data-i18n="knowledge.descent4">Prepare for landing impact</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="emergency-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.emergencyTitle">Emergency Procedures</span>
+                    <span class="card-subtitle" data-i18n="knowledge.emergencyDesc">What to do in different emergency situations</span>
+                </div>
+                <div class="emergency-grid">
+                    <div class="emergency-card" id="emergency-evacuation">
+                        <div class="emergency-icon">🚪</div>
+                        <h3 data-i18n="knowledge.evacuation">Emergency Evacuation</h3>
+                        <p data-i18n="knowledge.evacuationDesc">In case of emergency, follow crew instructions immediately.</p>
+                    </div>
+                    <div class="emergency-card" id="emergency-brace">
+                        <div class="emergency-icon">🙌</div>
+                        <h3 data-i18n="knowledge.brace">Brace Position</h3>
+                        <p data-i18n="knowledge.braceDesc">The brace position reduces impact forces and protects vital organs.</p>
+                    </div>
+                    <div class="emergency-card" id="emergency-oxygen">
+                        <div class="emergency-icon">💨</div>
+                        <h3 data-i18n="knowledge.oxygen">Oxygen System</h3>
+                        <p data-i18n="knowledge.oxygenDesc">Drop-down oxygen masks deploy automatically if cabin pressure drops.</p>
+                    </div>
+                    <div class="emergency-card" id="emergency-lifejacket">
+                        <div class="emergency-icon">🦺</div>
+                        <h3 data-i18n="knowledge.lifeJacket">Life Jacket</h3>
+                        <p data-i18n="knowledge.lifeJacketDesc">Life jackets are located under your seat. Don't inflate until outside the aircraft.</p>
+                    </div>
+                    <div class="emergency-card" id="emergency-exit">
+                        <div class="emergency-icon">🚨</div>
+                        <h3 data-i18n="knowledge.exitRow">Exit Row Responsibilities</h3>
+                        <p data-i18n="knowledge.exitRowDesc">If seated in an exit row, you must be able to operate the emergency exit.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="myths-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.safetyMythsTitle">Safety Myths & Facts</span>
+                    <span class="card-subtitle" data-i18n="knowledge.safetyMythsDesc">Debunk common misconceptions about air travel</span>
+                </div>
+                <div class="myths-grid">
+                    <div class="myth-card">
+                        <div class="myth-badge" data-i18n="knowledge.myth">Myth</div>
+                        <div class="myth-text" data-i18n="knowledge.myth1">Turbulence can crash a plane</div>
+                        <div class="fact-badge" data-i18n="knowledge.fact">Fact</div>
+                        <div class="fact-text" data-i18n="knowledge.fact1">Modern aircraft are designed to withstand severe turbulence. Turbulence rarely causes structural damage.</div>
+                    </div>
+                    <div class="myth-card">
+                        <div class="myth-badge" data-i18n="knowledge.myth">Myth</div>
+                        <div class="myth-text" data-i18n="knowledge.myth2">Small planes are less safe than large jets</div>
+                        <div class="fact-badge" data-i18n="knowledge.fact">Fact</div>
+                        <div class="fact-text" data-i18n="knowledge.fact2">Safety depends on maintenance and pilot training, not size. Many small aircraft have excellent safety records.</div>
+                    </div>
+                    <div class="myth-card">
+                        <div class="myth-badge" data-i18n="knowledge.myth">Myth</div>
+                        <div class="myth-text" data-i18n="knowledge.myth3">Cell phones cause crashes</div>
+                        <div class="fact-badge" data-i18n="knowledge.fact">Fact</div>
+                        <div class="fact-text" data-i18n="knowledge.fact3">No documented evidence links cell phone use to crashes. Flight mode rules are about interference with navigation systems.</div>
+                    </div>
+                    <div class="myth-card">
+                        <div class="myth-badge" data-i18n="knowledge.myth">Myth</div>
+                        <div class="myth-text" data-i18n="knowledge.myth4">Oxygen masks provide unlimited oxygen</div>
+                        <div class="fact-badge" data-i18n="knowledge.fact">Fact</div>
+                        <div class="fact-text" data-i18n="knowledge.fact4">Oxygen masks provide about 15-20 minutes of oxygen, enough time for the plane to descend to a safe altitude.</div>
+                    </div>
+                    <div class="myth-card">
+                        <div class="myth-badge" data-i18n="knowledge.myth">Myth</div>
+                        <div class="myth-text" data-i18n="knowledge.myth5">Emergency landings mean certain death</div>
+                        <div class="fact-badge" data-i18n="knowledge.fact">Fact</div>
+                        <div class="fact-text" data-i18n="knowledge.fact5">Emergency landings have high survival rates. Crew training and safety equipment greatly increase chances of survival.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.accidentByPhase">Accidents by Flight Phase</span>
+                    <span class="card-subtitle" data-i18n="knowledge.accidentByPhaseDesc">Distribution of accidents across different flight phases</span>
+                </div>
+                <div class="chart-container knowledge-chart">
+                    <canvas id="phaseChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="timeline-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.timelineTitle">Aviation Safety Milestones</span>
+                    <span class="card-subtitle" data-i18n="knowledge.timelineDesc">Key events that shaped modern aviation safety</span>
+                </div>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-year">1944</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t1944Title">Chicago Convention & ICAO Established</h4>
+                            <p data-i18n="knowledge.t1944Desc">52 nations signed the Convention on International Civil Aviation, establishing the International Civil Aviation Organization (ICAO) to set global aviation standards.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1958</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t1958Title">FAA Established</h4>
+                            <p data-i18n="knowledge.t1958Desc">The Federal Aviation Act created the Federal Aviation Agency (later FAA) in the United States, centralizing civil aviation regulation after a series of mid-air collisions.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1977</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t1977Title">Tenerife Disaster</h4>
+                            <p data-i18n="knowledge.t1977Desc">The deadliest accident in aviation history (583 fatalities) led to major changes in CRM (Crew Resource Management) and standardized English aviation phraseology.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">1996</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t1996Title">Aviation Safety Action Program (ASAP)</h4>
+                            <p data-i18n="knowledge.t1996Desc">FAA launched ASAP to encourage voluntary reporting of safety issues by employees without fear of punishment, fundamentally changing safety culture.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2003</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t2003Title">EASA Established</h4>
+                            <p data-i18n="knowledge.t2003Desc">The European Union Aviation Safety Agency was founded to unify safety regulation across EU member states, replacing national Joint Aviation Authorities.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2013</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t2013Title">ICAO Mandates SMS</h4>
+                            <p data-i18n="knowledge.t2013Desc">ICAO Annex 19 required Safety Management Systems (SMS) for airlines and airports, shifting from reactive investigation to proactive risk management.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2017</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t2017Title">GADSS Proposed</h4>
+                            <p data-i18n="knowledge.t2017Desc">After MH370 disappearance, ICAO proposed the Global Aeronautical Distress and Safety System (GADSS), requiring autonomous distress tracking for commercial aircraft.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2019</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t2019Title">Boeing 737 MAX Grounding</h4>
+                            <p data-i18n="knowledge.t2019Desc">After two fatal accidents (Lion Air JT610 and Ethiopian ET302), the 737 MAX was grounded worldwide, prompting reviews of aircraft certification and MCAS software.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-year">2024</div>
+                        <div class="timeline-content">
+                            <h4 data-i18n="knowledge.t2024Title">GADS & Next-Gen Safety</h4>
+                            <p data-i18n="knowledge.t2024Desc">ICAO's Global Aviation Data System (GADS) aggregates safety data worldwide, enabling predictive analytics and data-driven safety improvements across the industry.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="standards-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.airlineSafetyTitle">Airline Safety Standards</span>
+                    <span class="card-subtitle" data-i18n="knowledge.airlineSafetyDesc">Global safety regulations and certifications</span>
+                </div>
+                <div class="standards-grid">
+                    <a href="https://www.icao.int" target="_blank" rel="noopener noreferrer" class="standard-card">
+                        <div class="standard-logo">🌍</div>
+                        <h3 data-i18n="knowledge.icao">ICAO Standards</h3>
+                        <p data-i18n="knowledge.icaoDesc">International Civil Aviation Organization sets global safety standards.</p>
+                        <span class="standard-link" data-i18n="knowledge.learnMore">Learn More</span>
+                    </a>
+                    <a href="https://www.faa.gov" target="_blank" rel="noopener noreferrer" class="standard-card">
+                        <div class="standard-logo">🇺🇸</div>
+                        <h3 data-i18n="knowledge.faa">FAA Regulations</h3>
+                        <p data-i18n="knowledge.faaDesc">Federal Aviation Administration regulates US aviation safety.</p>
+                        <span class="standard-link" data-i18n="knowledge.learnMore">Learn More</span>
+                    </a>
+                    <a href="https://www.easa.europa.eu" target="_blank" rel="noopener noreferrer" class="standard-card">
+                        <div class="standard-logo">🇪🇺</div>
+                        <h3 data-i18n="knowledge.easa">EASA Standards</h3>
+                        <p data-i18n="knowledge.easaDesc">European Union Aviation Safety Agency standards for Europe.</p>
+                        <span class="standard-link" data-i18n="knowledge.learnMore">Learn More</span>
+                    </a>
+                    <a href="https://www.iata.org/en/programs/safety/iosa/" target="_blank" rel="noopener noreferrer" class="standard-card">
+                        <div class="standard-logo">✈️</div>
+                        <h3 data-i18n="knowledge.iosa">IOSA Certification</h3>
+                        <p data-i18n="knowledge.iosaDesc">IATA Operational Safety Audit - global airline safety certification.</p>
+                        <span class="standard-link" data-i18n="knowledge.learnMore">Learn More</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="faq-section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" data-i18n="knowledge.faqTitle">Frequently Asked Questions</span>
+                    <span class="card-subtitle" data-i18n="knowledge.faqDesc">Common questions about aviation safety</span>
+                </div>
+                <div class="faq-list">
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ1">What is the safest seat on a plane?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA1">Studies suggest that seats near the exit rows or at the back of the plane may have slightly higher survival rates. However, the most important factor is following crew instructions and being prepared for emergencies.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ2">How often do planes undergo maintenance?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA2">Commercial aircraft undergo routine maintenance every 200-300 flight hours or every 30 days, whichever comes first. Major inspections occur at regular intervals based on manufacturer recommendations and regulatory requirements.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ3">Is it safe to fly during thunderstorms?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA3">Modern aircraft are designed to withstand lightning strikes and turbulence. Pilots receive real-time weather updates and will either fly around storms or delay takeoff/landing until conditions improve.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ4">What happens if there's an engine failure?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA4">Commercial jets can safely fly with just one engine. Pilots are trained to handle engine failures and will divert to the nearest suitable airport. The remaining engine provides sufficient power for a safe landing.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ5">Why do we need to put our seats upright for takeoff and landing?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA5">Upright seats allow passengers behind you to exit more quickly in an emergency. They also help maintain the structural integrity of the cabin and provide better protection in case of sudden deceleration.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ6">Why must electronic devices be in flight mode?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA6">Electronic devices emit electromagnetic signals that may interfere with aircraft navigation and communication systems. Flight mode disables wireless transmissions while allowing you to use your device. Modern aircraft are better shielded, but flight mode remains a regulatory requirement as a precaution.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ7">How do oxygen masks work and when are they deployed?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA7">Oxygen masks automatically deploy when cabin pressure drops below safe levels, typically above 14,000 feet. Pull the mask down firmly to start the oxygen flow, place it over your nose and mouth, and secure the elastic band. Always secure your own mask before helping others, including children.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ8">What is clear-air turbulence and is it dangerous?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA8">Clear-air turbulence (CAT) occurs in cloudless skies, often near jet streams, and cannot be detected by radar. While unsettling, modern aircraft are built to withstand forces far exceeding any turbulence. Keeping your seatbelt fastened while seated is the best protection against unexpected turbulence injuries.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ9">How are flight crews trained for emergencies?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA9">Pilots undergo rigorous recurrent training every six months in full-motion simulators, practicing engine failures, fires, decompression, and other emergencies. Cabin crew receive annual safety and evacuation training. All crew members must pass proficiency checks to maintain their qualifications.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ10">What is the black box and how does it help improve safety?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA10">The "black box" consists of the Flight Data Recorder (FDR) and Cockpit Voice Recorder (CVR), both painted bright orange for visibility. They record flight parameters and cockpit audio, surviving crashes in crash-survivable memory units. Analysis of this data drives safety improvements across the entire aviation industry.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ11">Why do accident counts spike in certain years?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA11">Spikes often reflect regulatory gaps, new technology adoption issues, or geopolitical events. For example, the 1970s saw high accident rates due to the rapid introduction of wide-body jets and less sophisticated weather radar. The 2014-2015 spike included MH370, MH17, and Germanwings—three unrelated rare events. Spikes drive industry-wide safety reviews.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ12">How is the safety score calculated?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA12">Safety scores combine multiple weighted factors: fatality rate per million flights (40%), accident frequency over 10 years (25%), IOSA certification status (15%), fleet modernization (10%), and trend direction (10%). No single metric determines the score—a carrier with rare but severe accidents may still score well if overall operations are sound.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ13">Why does IOSA certification matter?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA13">The IATA Operational Safety Audit (IOSA) is a globally recognized safety standard. Airlines must pass rigorous audits covering organization, flight operations, and maintenance. Statistics show IOSA-registered airlines have a 4-5x lower accident rate than non-IOSA carriers. Major alliances require IOSA for membership.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ14">What's the difference between accident rate and fatality rate?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA14">Accident rate counts incidents per million departures regardless of severity. Fatality rate counts deaths per billion passenger-kilometers. A regional airline with many minor incidents may have a high accident rate but low fatality rate, while a carrier with one catastrophic event shows the opposite pattern. Both metrics together give a complete picture.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" data-i18n="knowledge.faqQ15">Why were the 1970s-1980s so much more dangerous than today?</button>
+                        <div class="faq-answer">
+                            <p data-i18n="knowledge.faqA15">Several factors: (1) Cockpit Resource Management (CRM) wasn't standardized until after Tenerife 1977; (2) Ground Proximity Warning Systems (GPWS) only became mandatory in the 1980s, eliminating many CFIT accidents; (3) Weather radar and wind shear detection were primitive; (4) Aircraft reliability was lower. Each major accident drove specific safety improvements that cumulatively reduced fatal accident rates by over 80%.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script src="js/common.js"></script>
+    <script src="js/local-database.js"></script>
+    <script src="js/data-loader.js"></script>
+    <script src="js/safety-knowledge.js"></script>
+</body>
+</html>
