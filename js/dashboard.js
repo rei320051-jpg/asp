@@ -276,10 +276,10 @@ function initEarthCanvas() {
     function startSweep() {
         if (sweepTimer) return;
         sweepTimer = setInterval(() => {
-            sweepAngle++;
+            sweepAngle += 2;
             needsRedraw = true;
             scheduleDraw();
-        }, 40);
+        }, 30);
     }
 
     function draw() {
@@ -334,23 +334,25 @@ function initEarthCanvas() {
                 if (isHovered || c.accident.fatalities > 50) high.push(c);
                 else low.push(c);
             }
+            const dotScale = Math.sqrt(zoom);
             ctx.save();
             ctx.translate(panX, panY);
             ctx.scale(zoom, zoom);
             // Draw low-severity dots first (small batch)
             if (low.length) {
                 for (const c of low) {
-                    const pulse = (Math.sin(sweepAngle * 0.02 + c.accident.latitude + c.accident.longitude) + 1) / 2;
+                    const pulse = (Math.sin(sweepAngle * 0.06 + c.accident.latitude + c.accident.longitude) + 1) / 2;
+                    const r = 2 * dotScale;
                     ctx.beginPath();
-                    ctx.arc(c.x, c.y, 2 * 2 + pulse * 3, 0, Math.PI * 2);
+                    ctx.arc(c.x, c.y, r * 2 + pulse * 3 * dotScale, 0, Math.PI * 2);
                     ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
                     ctx.fill();
                     ctx.beginPath();
-                    ctx.arc(c.x, c.y, 2, 0, Math.PI * 2);
+                    ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
                     ctx.fillStyle = '#ffb800';
                     ctx.fill();
                     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-                    ctx.lineWidth = 1;
+                    ctx.lineWidth = 1 * dotScale;
                     ctx.stroke();
                 }
             }
@@ -358,10 +360,11 @@ function initEarthCanvas() {
             if (high.length) {
                 for (const c of high) {
                     const isHovered = hoveredAccident === c.accident;
-                    const size = isHovered ? 7 : 5;
-                    const pulse = (Math.sin(sweepAngle * 0.02 + c.accident.latitude + c.accident.longitude) + 1) / 2;
+                    const baseSize = isHovered ? 7 : 5;
+                    const size = baseSize * dotScale;
+                    const pulse = (Math.sin(sweepAngle * 0.06 + c.accident.latitude + c.accident.longitude) + 1) / 2;
                     ctx.beginPath();
-                    ctx.arc(c.x, c.y, size * 2 + pulse * 3, 0, Math.PI * 2);
+                    ctx.arc(c.x, c.y, size * 2 + pulse * 3 * dotScale, 0, Math.PI * 2);
                     ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
                     ctx.fill();
                     ctx.beginPath();
@@ -369,7 +372,7 @@ function initEarthCanvas() {
                     ctx.fillStyle = '#ff3344';
                     ctx.fill();
                     ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
-                    ctx.lineWidth = isHovered ? 2.5 : 1;
+                    ctx.lineWidth = (isHovered ? 2.5 : 1) * dotScale;
                     ctx.stroke();
                 }
             }
