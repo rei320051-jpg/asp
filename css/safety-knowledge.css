@@ -40,7 +40,7 @@
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1rem;
 }
-.stat-card {
+.knowledge-stat-card {
     padding: 1.25rem;
     border-radius: var(--card-radius);
     text-align: center;
@@ -48,7 +48,7 @@
     position: relative;
     overflow: hidden;
 }
-.stat-card::before {
+.knowledge-stat-card::before {
     content: '';
     position: absolute;
     top: 0;
@@ -56,46 +56,46 @@
     right: 0;
     height: 3px;
 }
-.stat-card-blue {
+.knowledge-stat-card-blue {
     background: linear-gradient(135deg, rgba(0, 102, 204, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
     border: 1px solid rgba(0, 102, 204, 0.2);
 }
-.stat-card-blue::before {
+.knowledge-stat-card-blue::before {
     background: linear-gradient(90deg, var(--color-primary), var(--color-blue));
 }
-.stat-card-green {
+.knowledge-stat-card-green {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
     border: 1px solid rgba(34, 197, 94, 0.2);
 }
-.stat-card-green::before {
+.knowledge-stat-card-green::before {
     background: linear-gradient(90deg, #22c55e, #10b981);
 }
-.stat-card-purple {
+.knowledge-stat-card-purple {
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%);
     border: 1px solid rgba(124, 58, 237, 0.2);
 }
-.stat-card-purple::before {
+.knowledge-stat-card-purple::before {
     background: linear-gradient(90deg, var(--color-purple), #6366f1);
 }
-.stat-card-orange {
+.knowledge-stat-card-orange {
     background: linear-gradient(135deg, rgba(255, 136, 0, 0.1) 0%, rgba(251, 146, 60, 0.05) 100%);
     border: 1px solid rgba(255, 136, 0, 0.2);
 }
-.stat-card-orange::before {
+.knowledge-stat-card-orange::before {
     background: linear-gradient(90deg, var(--color-accent), #fb923c);
 }
-.stat-card:hover {
+.knowledge-stat-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
-.stat-value {
+.knowledge-stat-card .stat-value {
     font-size: 2rem;
     font-weight: 700;
     font-family: var(--font-display);
     color: var(--text-primary);
     margin-bottom: 0.25rem;
 }
-.stat-label {
+.knowledge-stat-card .stat-label {
     font-size: 0.75rem;
     color: var(--text-muted);
     text-transform: uppercase;
@@ -585,11 +585,4 @@
 }
 [data-theme="dark"] .page-header-knowledge::before {
     opacity: 0.15;
-}
-[data-theme="dark"] input,
-[data-theme="dark"] select,
-[data-theme="dark"] textarea {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
 }

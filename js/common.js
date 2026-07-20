@@ -1602,16 +1602,6 @@ function safeExecute(fn, fallback = null) {
     }
 }
 
-function validateAccident(accident) {
-    const requiredFields = ['date', 'airline', 'latitude', 'longitude'];
-    return requiredFields.every(field => accident && accident[field]);
-}
-
-function validateData(data) {
-    if (!data || !Array.isArray(data)) return false;
-    return data.every(validateAccident);
-}
-
 window.addEventListener('error', (event) => {
     console.error('Global error:', event.error);
     showToast(t('error.global') || 'An error occurred. Please refresh the page.', 'error', 5000);

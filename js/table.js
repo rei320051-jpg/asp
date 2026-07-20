@@ -172,6 +172,7 @@ function getFilteredAndSearched() {
     
     return data;
 }
+// 【渲染数据表格 - 分页 + 排序】
 function renderTable() {
     const data = getFilteredAndSearched();
     const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
@@ -274,6 +275,7 @@ function renderPagination(totalPages) {
     if (prevBtn) prevBtn.disabled = currentPage === 1;
     if (nextBtn) nextBtn.disabled = currentPage === totalPages;
 }
+// 【显示事故详情弹窗】
 function showDetailModal(accident) {
     const content = `
         <div class="modal-aircraft-banner" style="background-image: url('images/modal-aircraft.jpg');">
@@ -371,6 +373,7 @@ function showDetailModal(accident) {
     
     showModal(`${td(accident.airline)} ${accident.flightNumber} - ${formatDate(accident.date)}`, content);
 }
+// 【导出数据：CSV / Excel / JSON】
 function exportCSV() {
     const data = getFilteredAndSearched();
     
@@ -498,6 +501,7 @@ function exportJSON() {
 }
 
 // ===== Search Autocomplete =====
+// 【搜索自动补全 + 高级搜索逻辑】
 function initSearchAutocomplete(input) {
     let dropdown = document.createElement('div');
     dropdown.className = 'search-autocomplete';

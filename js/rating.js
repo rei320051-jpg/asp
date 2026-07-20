@@ -203,6 +203,7 @@ function initRadarChart() {
         }
     });
 }
+// 【计算航空公司雷达评分】
 function calculateRadarScores(airline) {
     // Normalize each dimension to 0-100
     const maxFleet = Math.max(...AppState.airlines.map(a => a.fleetSize));
@@ -402,6 +403,7 @@ function initAircraftChart() {
         }
     });
 }
+// 【绘制机型事故分布图】
 function renderAircraftChart() {
     if (!aircraftChart) return;
     

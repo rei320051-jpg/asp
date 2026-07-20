@@ -95,6 +95,7 @@ function getAircraftImage(model) {
     return `images/aircraft/${slug}.${ext}`;
 }
 
+// 【渲染飞机对比概览】
 function renderOverview(a, b) {
     const container = document.getElementById('compareOverview');
     if (!container) return;
@@ -182,6 +183,7 @@ function getRadarData(aircraft) {
     ];
 }
 
+// 【渲染机型对比雷达图】
 function renderRadarChart(a, b) {
     const ctx = document.getElementById('radarChart');
     if (!ctx) return;
@@ -339,6 +341,7 @@ function renderBarChart(a, b) {
 }
 
 // ===== Accident List =====
+// 【按机型筛选事故记录】
 function getAccidentsByModel(model) {
     return AppState.accidents.filter(acc => acc.aircraft === model);
 }
@@ -420,6 +423,7 @@ let touchStartCenter = { x: 0, y: 0 };
 let touchStartZoom = 1;
 let touchStartTranslate = { x: 0, y: 0 };
 
+// 【图片灯箱浏览功能】
 function initImageLightbox() {
     const lightbox = document.getElementById('imageLightbox');
     const lightboxImage = document.getElementById('lightboxImage');

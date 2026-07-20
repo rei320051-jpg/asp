@@ -1,8 +1,8 @@
-// ===== Dashboard Page Logic =====
+// ===== 仪表盘主逻辑 =====
 let trendChart, causeChart, fatalityChart, survivalChart;
 let earthAnimationId;
 let needsRedraw = true;
-// ===== Initialize Dashboard =====
+// ===== 初始化仪表盘 =====
 document.addEventListener('DOMContentLoaded', async () => {
     const skeleton = document.querySelector('.map-skeleton');
     if (skeleton) skeleton.classList.remove('hidden');
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateDashboard();
     });
 });
-// ===== World Map Visualization (D3 + Natural Earth GeoJSON) =====
+// ===== 全球事故地图可视化（D3 + 地图）=====
 function initEarthCanvas() {
     const canvas = document.getElementById('earthCanvas');
     if (!canvas) return;
@@ -262,6 +262,7 @@ function initEarthCanvas() {
         scheduleDraw();
     });
     
+    // 【构建事故点位置缓存 - 避免重复投影计算】
     function buildPositionCache() {
         const { filteredAccidents } = AppState;
         if (!projection) return;
@@ -273,6 +274,7 @@ function initEarthCanvas() {
         }
     }
 
+    // 【按需调度绘制帧 - 仅在需要时 requestAnimationFrame】
     function scheduleDraw() {
         if (earthAnimationId) return;
         earthAnimationId = requestAnimationFrame(draw);
@@ -580,7 +582,7 @@ function initEarthCanvas() {
     updateZoomIndicator();
     draw();
 }
-// ===== Initialize Charts =====
+// ===== 初始化图表（Chart.js）=====
 function initCharts() {
     const defaults = getChartDefaults();
     
@@ -813,12 +815,7 @@ function initCharts() {
         }
     });
 }
-function getChartDefaults() {
-    return {
-        gridColor: 'rgba(0, 0, 0, 0.05)'
-    };
-}
-// ===== Update Dashboard Data =====
+// ===== 更新仪表盘数据图表 =====
 let updateTimeout;
 function updateDashboard() {
     clearTimeout(updateTimeout);
@@ -836,6 +833,7 @@ function updateDashboard() {
         updateSurvivalChart(filteredAccidents);
     }, 150);
 }
+// 【更新统计卡片/趋势图/原因图/航空公司图/区域列表/阶段分布/生存率】
 function updateStatCards(accidents) {
     const totalAccidents = accidents.length;
     const totalFatalities = accidents.reduce((sum, a) => sum + a.fatalities, 0);
@@ -884,26 +882,6 @@ function updateStatCards(accidents) {
     if (riskAirlineEl) {
         riskAirlineEl.textContent = highRiskAirline === '--' ? highRiskAirline : `${td(highRiskAirline)}`;
     }
-}
-function animateNumber(element, target) {
-    if (!element) return;
-    const start = parseInt(element.textContent.replace(/[^0-9]/g, '')) || 0;
-    const duration = 800;
-    const startTime = performance.now();
-    
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-        const current = Math.round(start + (target - start) * easeOut);
-        element.textContent = current.toLocaleString();
-        
-        if (progress < 1) {
-            requestAnimationFrame(update);
-        }
-    }
-    
-    requestAnimationFrame(update);
 }
 function updateTrendChart(accidents) {
     const yearData = {};
@@ -1015,7 +993,4 @@ function updateSurvivalChart(accidents) {
     survivalChart.data.datasets[1].data = [stats.injured];
     survivalChart.data.datasets[2].data = [stats.uninjured];
     survivalChart.update();
-}
-function getYearFromDate(dateStr) {
-    return parseInt(dateStr.split('-')[0]);
 }

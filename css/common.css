@@ -60,6 +60,14 @@
     --skeleton-base: #2a2d3a;
     --skeleton-shine: #353948;
 }
+/* 深色模式下表单元素样式 */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
 /* ===== Reset & Base ===== */
 * {
     margin: 0;
@@ -988,16 +996,6 @@ h4 { font-size: 1.1rem; }
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
-/* Terminal Cursor */
-.terminal-cursor::after {
-    content: '_';
-    animation: blink 1s step-end infinite;
-    color: var(--color-primary);
-}
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-}
 /* ===== Toast Notifications ===== */
 .toast-container {
     position: fixed;
@@ -1084,13 +1082,6 @@ textarea.error {
     border-color: var(--color-secondary) !important;
     box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
 }
-.field-error {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--color-secondary);
-    margin-top: 0.25rem;
-}
-
 /* ===== Back to Top Button ===== */
 .back-to-top {
     position: fixed;

@@ -19,6 +19,7 @@ function initFaq() {
     });
 }
 
+// 【绘制飞行阶段事故分布图表】
 function renderPhaseChart() {
     const ctx = document.getElementById('phaseChart');
     if (!ctx) return;
