@@ -276,7 +276,7 @@ function initEarthCanvas() {
     function startSweep() {
         if (sweepTimer) return;
         sweepTimer = setInterval(() => {
-            sweepAngle += 2;
+            sweepAngle += 3;
             needsRedraw = true;
             scheduleDraw();
         }, 30);
@@ -322,7 +322,7 @@ function initEarthCanvas() {
         ctx.drawImage(offscreen, 0, 0, w, h);
         ctx.restore();
 
-        // Batch-render accident points from cached positions
+        // Batch-render accident points from cached positions (screen coords)
         if (cachedPositions) {
             const len = cachedPositions.length;
             // Group by fatality severity for batching (fewer state changes)
@@ -334,52 +334,48 @@ function initEarthCanvas() {
                 if (isHovered || c.accident.fatalities > 50) high.push(c);
                 else low.push(c);
             }
-            const dotScale = Math.sqrt(zoom);
-            ctx.save();
-            ctx.translate(panX, panY);
-            ctx.scale(zoom, zoom);
-            // Draw low-severity dots first (small batch)
-            if (low.length) {
-                for (const c of low) {
-                    const pulse = (Math.sin(sweepAngle * 0.06 + c.accident.latitude + c.accident.longitude) + 1) / 2;
-                    const r = 2 * dotScale;
-                    ctx.beginPath();
-                    ctx.arc(c.x, c.y, r * 2 + pulse * 3 * dotScale, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
-                    ctx.fill();
-                    ctx.beginPath();
-                    ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
-                    ctx.fillStyle = '#ffb800';
-                    ctx.fill();
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-                    ctx.lineWidth = 1 * dotScale;
-                    ctx.stroke();
-                }
+            const dotScale = Math.pow(zoom, 0.8);
+            // Draw low-severity dots
+            for (const c of low) {
+                const sx = c.x * zoom + panX;
+                const sy = c.y * zoom + panY;
+                const pulse = (Math.sin(sweepAngle * 0.08 + c.accident.latitude + c.accident.longitude) + 1) / 2;
+                const r = 2.5 * dotScale;
+                ctx.beginPath();
+                ctx.arc(sx, sy, r * 2 + pulse * 3 * dotScale, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(sx, sy, r, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffb800';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 1 * dotScale;
+                ctx.stroke();
             }
-            // Draw high-severity / hovered dots (bright, slightly larger)
-            if (high.length) {
-                for (const c of high) {
-                    const isHovered = hoveredAccident === c.accident;
-                    const baseSize = isHovered ? 7 : 5;
-                    const size = baseSize * dotScale;
-                    const pulse = (Math.sin(sweepAngle * 0.06 + c.accident.latitude + c.accident.longitude) + 1) / 2;
-                    ctx.beginPath();
-                    ctx.arc(c.x, c.y, size * 2 + pulse * 3 * dotScale, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
-                    ctx.fill();
-                    ctx.beginPath();
-                    ctx.arc(c.x, c.y, size, 0, Math.PI * 2);
-                    ctx.fillStyle = '#ff3344';
-                    ctx.fill();
-                    ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
-                    ctx.lineWidth = (isHovered ? 2.5 : 1) * dotScale;
-                    ctx.stroke();
-                }
+            // Draw high-severity / hovered dots
+            for (const c of high) {
+                const sx = c.x * zoom + panX;
+                const sy = c.y * zoom + panY;
+                const isHovered = hoveredAccident === c.accident;
+                const baseSize = isHovered ? 7 : 5;
+                const size = baseSize * dotScale;
+                const pulse = (Math.sin(sweepAngle * 0.08 + c.accident.latitude + c.accident.longitude) + 1) / 2;
+                ctx.beginPath();
+                ctx.arc(sx, sy, size * 2 + pulse * 3 * dotScale, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(sx, sy, size, 0, Math.PI * 2);
+                ctx.fillStyle = '#ff3344';
+                ctx.fill();
+                ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = (isHovered ? 2.5 : 1) * dotScale;
+                ctx.stroke();
             }
-            ctx.restore();
         }
 
-        const sweepX = ((sweepAngle * 0.5) % (w + 200)) - 100;
+        const sweepX = ((sweepAngle * 0.8) % (w + 200)) - 100;
         const sweepGradient = ctx.createLinearGradient(sweepX - 80, 0, sweepX + 80, 0);
         sweepGradient.addColorStop(0, 'rgba(0, 200, 255, 0)');
         sweepGradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.15)');
