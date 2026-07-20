@@ -42,6 +42,7 @@ function initEarthCanvas() {
     let sweepAngle = 0;
     let mapReady = false;
     let hoveredAccidentChanged = false;
+    let cachedPositions = null;
     
     let zoom = 1;
     let panX = 0;
@@ -60,11 +61,25 @@ function initEarthCanvas() {
     function getAccidentScreenPos(accident) {
         if (!projection) return null;
         const [x, y] = projection([accident.longitude, accident.latitude]);
-        return [x + panX, y + panY];
+        return [x * zoom + panX, y * zoom + panY];
     }
-    
+
     function findHoveredAccident(sx, sy) {
         const threshold = 15;
+        // Use cache when available for faster lookup
+        if (cachedPositions) {
+            const px = (sx - panX) / zoom;
+            const py = (sy - panY) / zoom;
+            const adjThreshold = threshold / zoom;
+            for (let i = 0; i < cachedPositions.length; i++) {
+                const c = cachedPositions[i];
+                if (!c) continue;
+                const dist = Math.sqrt((px - c.x) ** 2 + (py - c.y) ** 2);
+                if (dist < adjThreshold) return c.accident;
+            }
+            return null;
+        }
+        // Fallback: direct projection
         for (const accident of AppState.filteredAccidents) {
             const pos = getAccidentScreenPos(accident);
             if (!pos) continue;
@@ -148,18 +163,20 @@ function initEarthCanvas() {
         panY = 0;
         updateZoomIndicator();
         needsRedraw = true;
+        scheduleDraw();
     }
     
     d3.json('data/countries-110m.json').then(world => {
         worldGeoJSON = topojson.feature(world, world.objects.countries);
         resize();
         mapReady = true;
-        
+        startSweep();
+
         setTimeout(() => {
             const skeleton = document.querySelector('.map-skeleton');
             if (skeleton) skeleton.classList.add('hidden');
         }, 300);
-        
+
         draw();
     }).catch(error => {
         console.error('Failed to load world map:', error);
@@ -174,22 +191,27 @@ function initEarthCanvas() {
         const rect = container.getBoundingClientRect();
         cachedW = rect.width;
         cachedH = rect.height;
-        
-        canvas.width = cachedW;
-        canvas.height = cachedH;
-        offscreen.width = cachedW;
-        offscreen.height = cachedH;
-        
+
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = cachedW * dpr;
+        canvas.height = cachedH * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        offscreen.width = cachedW * dpr;
+        offscreen.height = cachedH * dpr;
+        offCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
         projection = d3.geoNaturalEarth1()
             .scale(cachedW / Math.PI / 1.5)
             .translate([cachedW / 2, cachedH / 2]);
-        
+
         pathGenerator = d3.geoPath().projection(projection);
-        
+
         renderStaticMap();
+        cachedPositions = null;
         needsRedraw = true;
+        scheduleDraw();
     }
-    
+
     function renderStaticMap() {
         if (!worldGeoJSON || !pathGenerator) return;
         
@@ -231,74 +253,129 @@ function initEarthCanvas() {
     window.addEventListener('resize', () => {
         resize();
         needsRedraw = true;
+        scheduleDraw();
     });
     
-    function draw() {
-        if (isPaused) {
-            earthAnimationId = requestAnimationFrame(draw);
-            return;
+    function buildPositionCache() {
+        const { filteredAccidents } = AppState;
+        if (!projection) return;
+        cachedPositions = new Array(filteredAccidents.length);
+        for (let i = 0; i < filteredAccidents.length; i++) {
+            const a = filteredAccidents[i];
+            const pos = projection([a.longitude, a.latitude]);
+            cachedPositions[i] = pos ? { x: pos[0], y: pos[1], accident: a } : null;
         }
-        
+    }
+
+    function scheduleDraw() {
+        if (earthAnimationId) return;
+        earthAnimationId = requestAnimationFrame(draw);
+    }
+
+    let sweepTimer = null;
+    function startSweep() {
+        if (sweepTimer) return;
+        sweepTimer = setInterval(() => {
+            sweepAngle++;
+            needsRedraw = true;
+            scheduleDraw();
+        }, 100);
+    }
+
+    function draw() {
+        earthAnimationId = null;
+
+        if (isPaused) return;
+
         const container = canvas.parentElement;
         const rect = container.getBoundingClientRect();
         const w = rect.width;
         const h = rect.height;
-        
+
         if (w !== cachedW || h !== cachedH) {
             cachedW = w;
             cachedH = h;
             needsRedraw = true;
         }
-        
+
         if (!mapReady) {
-            earthAnimationId = requestAnimationFrame(draw);
+            scheduleDraw();
             return;
         }
-        
+
         if (!needsRedraw && !isDragging && !hoveredAccidentChanged) {
-            sweepAngle += 1;
-            earthAnimationId = requestAnimationFrame(draw);
             return;
         }
-        
+
         needsRedraw = false;
         hoveredAccidentChanged = false;
-        
+
+        if (!cachedPositions) buildPositionCache();
+
+        // Scale for DPR — clear physical pixel area
+        const dpr = window.devicePixelRatio || 1;
         ctx.clearRect(0, 0, w, h);
-        
+
         ctx.save();
         ctx.translate(panX, panY);
         ctx.scale(zoom, zoom);
         ctx.drawImage(offscreen, 0, 0, w, h);
         ctx.restore();
-        
-        const { filteredAccidents } = AppState;
-        const len = filteredAccidents.length;
-        for (let i = 0; i < len; i++) {
-            const accident = filteredAccidents[i];
-            const pos = getAccidentScreenPos(accident);
-            if (!pos) continue;
-            const [x, y] = pos;
-            const isHovered = hoveredAccident === accident;
-            let size = accident.fatalities > 50 ? 5 : accident.fatalities > 10 ? 3 : 2;
-            if (isHovered) size += 2;
-            const pulse = (Math.sin(sweepAngle * 0.02 + accident.latitude + accident.longitude) + 1) / 2;
-            
-            ctx.beginPath();
-            ctx.arc(x, y, size * 2 + pulse * 3, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
-            ctx.fill();
-            
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fillStyle = accident.fatalities > 50 ? '#ff3344' : '#ffb800';
-            ctx.fill();
-            
-            ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
-            ctx.lineWidth = isHovered ? 2.5 : 1;
-            ctx.stroke();
+
+        // Batch-render accident points from cached positions
+        if (cachedPositions) {
+            const len = cachedPositions.length;
+            // Group by fatality severity for batching (fewer state changes)
+            const high = [], low = [];
+            for (let i = 0; i < len; i++) {
+                const c = cachedPositions[i];
+                if (!c) continue;
+                const isHovered = hoveredAccident === c.accident;
+                if (isHovered || c.accident.fatalities > 50) high.push(c);
+                else low.push(c);
+            }
+            ctx.save();
+            ctx.translate(panX, panY);
+            ctx.scale(zoom, zoom);
+            // Draw low-severity dots first (small batch)
+            if (low.length) {
+                for (const c of low) {
+                    const pulse = (Math.sin(sweepAngle * 0.02 + c.accident.latitude + c.accident.longitude) + 1) / 2;
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, 2 * 2 + pulse * 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ffb800';
+                    ctx.fill();
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+            // Draw high-severity / hovered dots (bright, slightly larger)
+            if (high.length) {
+                for (const c of high) {
+                    const isHovered = hoveredAccident === c.accident;
+                    const size = isHovered ? 7 : 5;
+                    const pulse = (Math.sin(sweepAngle * 0.02 + c.accident.latitude + c.accident.longitude) + 1) / 2;
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, size * 2 + pulse * 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, size, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ff3344';
+                    ctx.fill();
+                    ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = isHovered ? 2.5 : 1;
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
         }
-        
+
         const sweepX = ((sweepAngle * 0.5) % (w + 200)) - 100;
         const sweepGradient = ctx.createLinearGradient(sweepX - 80, 0, sweepX + 80, 0);
         sweepGradient.addColorStop(0, 'rgba(0, 200, 255, 0)');
@@ -314,10 +391,9 @@ function initEarthCanvas() {
         ctx.lineTo(sweepX, h);
         ctx.stroke();
         
-        sweepAngle += 1;
-        earthAnimationId = requestAnimationFrame(draw);
+        sweepAngle++;
     }
-    
+
     let isPaused = false;
     
     canvas.addEventListener('mousedown', (e) => {
@@ -347,11 +423,13 @@ function initEarthCanvas() {
                 hoveredAccidentChanged = true;
             }
             needsRedraw = true;
+            scheduleDraw();
         } else {
             const accident = findHoveredAccident(sx, sy);
             if (accident !== hoveredAccident) {
                 hoveredAccident = accident;
                 hoveredAccidentChanged = true;
+                scheduleDraw();
             }
             if (accident) {
                 showTooltip(accident, sx, sy);
@@ -387,6 +465,7 @@ function initEarthCanvas() {
         const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
         zoomAt(sx, sy, factor);
         needsRedraw = true;
+        scheduleDraw();
         const accident = findHoveredAccident(sx, sy);
         if (accident !== hoveredAccident) {
             hoveredAccident = accident;
@@ -460,16 +539,24 @@ function initEarthCanvas() {
         const w = canvas.offsetWidth, h = canvas.offsetHeight;
         zoomAt(w / 2, h / 2, 1.4);
         needsRedraw = true;
+        scheduleDraw();
     });
     document.getElementById('mapZoomOut')?.addEventListener('click', () => {
         const w = canvas.offsetWidth, h = canvas.offsetHeight;
         zoomAt(w / 2, h / 2, 1 / 1.4);
         needsRedraw = true;
+        scheduleDraw();
     });
     document.getElementById('mapReset')?.addEventListener('click', () => {
         resetView();
     });
-    
+
+    document.addEventListener('filtersUpdated', () => {
+        cachedPositions = null;
+        needsRedraw = true;
+        scheduleDraw();
+    });
+
     updateZoomIndicator();
     draw();
 }
