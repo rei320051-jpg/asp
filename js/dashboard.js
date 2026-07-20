@@ -4,9 +4,17 @@ let earthAnimationId;
 let needsRedraw = true;
 // ===== Initialize Dashboard =====
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadAllData();
-    initCharts();
-    updateDashboard();
+    const skeleton = document.querySelector('.map-skeleton');
+    if (skeleton) skeleton.classList.remove('hidden');
+    
+    try {
+        await loadAllData();
+        initCharts();
+        updateDashboard();
+    } catch (error) {
+        console.error('Failed to initialize dashboard:', error);
+    }
+    
     if ('requestIdleCallback' in window) {
         requestIdleCallback(() => initEarthCanvas(), { timeout: 1000 });
     } else {
@@ -142,17 +150,23 @@ function initEarthCanvas() {
         needsRedraw = true;
     }
     
-    d3.json('data/world-110m.json').then(world => {
+    d3.json('data/countries-110m.json').then(world => {
         worldGeoJSON = topojson.feature(world, world.objects.countries);
         resize();
         mapReady = true;
         
-        const skeleton = document.querySelector('.map-skeleton');
-        if (skeleton) skeleton.classList.add('hidden');
+        setTimeout(() => {
+            const skeleton = document.querySelector('.map-skeleton');
+            if (skeleton) skeleton.classList.add('hidden');
+        }, 300);
         
         draw();
     }).catch(error => {
         console.error('Failed to load world map:', error);
+        const skeleton = document.querySelector('.map-skeleton');
+        if (skeleton) {
+            skeleton.innerHTML = '<div class="skeleton-error">Failed to load map data</div>';
+        }
     });
     
     function resize() {
@@ -692,18 +706,22 @@ function getChartDefaults() {
     };
 }
 // ===== Update Dashboard Data =====
+let updateTimeout;
 function updateDashboard() {
-    const { filteredAccidents } = AppState;
-    
-    needsRedraw = true;
-    
-    updateStatCards(filteredAccidents);
-    updateTrendChart(filteredAccidents);
-    updateCauseChart(filteredAccidents);
-    updateFatalityChart(filteredAccidents);
-    updateRegionList(filteredAccidents);
-    updatePhaseGrid(filteredAccidents);
-    updateSurvivalChart(filteredAccidents);
+    clearTimeout(updateTimeout);
+    updateTimeout = setTimeout(() => {
+        const { filteredAccidents } = AppState;
+        
+        needsRedraw = true;
+        
+        updateStatCards(filteredAccidents);
+        updateTrendChart(filteredAccidents);
+        updateCauseChart(filteredAccidents);
+        updateFatalityChart(filteredAccidents);
+        updateRegionList(filteredAccidents);
+        updatePhaseGrid(filteredAccidents);
+        updateSurvivalChart(filteredAccidents);
+    }, 150);
 }
 function updateStatCards(accidents) {
     const totalAccidents = accidents.length;
@@ -837,7 +855,7 @@ function updateRegionList(accidents) {
     const sorted = Object.entries(regionCounts).sort((a, b) => b[1] - a[1]);
     const maxCount = Math.max(...sorted.map(([, c]) => c));
     
-    const container = document.getElementById('region-list');
+    const container = document.getElementById('regionList');
     if (!container) return;
     
     container.innerHTML = sorted.map(([region, count]) => `
@@ -859,7 +877,7 @@ function updatePhaseGrid(accidents) {
     const phases = ['Takeoff', 'Landing', 'Cruise', 'Taxi'];
     const colors = ['#ffb800', '#3b82f6', '#a855f7', '#00cc88'];
     
-    const container = document.getElementById('phase-grid');
+    const container = document.getElementById('phaseGrid');
     if (!container) return;
     
     container.innerHTML = phases.map((phase, i) => `
