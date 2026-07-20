@@ -23,7 +23,7 @@
 }
 /* Map Tooltip */
 .map-tooltip {
-    position: absolute;
+    position: fixed;
     pointer-events: none;
     background: var(--bg-glass);
     border: 1px solid rgba(0, 102, 204, 0.4);

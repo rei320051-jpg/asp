@@ -90,7 +90,7 @@ function initEarthCanvas() {
         return null;
     }
     
-    function showTooltip(accident, x, y) {
+    function showTooltip(accident, cx, cy) {
         const isZh = AppState.currentLang === 'zh';
         tooltip.innerHTML = `
             <div class="tooltip-header">
@@ -129,15 +129,21 @@ function initEarthCanvas() {
             </div>
         `;
         tooltip.style.display = 'block';
-        
-        const rect = canvas.getBoundingClientRect();
+
+        // Position tooltip in viewport space (position: fixed)
         const padding = 15;
-        let tx = x + padding;
-        let ty = y + padding;
-        
-        if (tx + 320 > rect.width) tx = x - 320 - padding;
-        if (ty + tooltip.offsetHeight > rect.height) ty = y - tooltip.offsetHeight - padding;
-        
+        const tipW = Math.min(320, window.innerWidth - padding * 2);
+        let tx = cx + padding;
+        let ty = cy + padding;
+
+        // Flip left if would overflow right edge
+        if (tx + tipW > window.innerWidth - padding) tx = cx - tipW - padding;
+        // Flip up if would overflow bottom edge
+        if (ty + tooltip.offsetHeight > window.innerHeight - padding) ty = cy - tooltip.offsetHeight - padding;
+        // Clamp to prevent overflowing left/top
+        tx = Math.max(padding, tx);
+        ty = Math.max(padding, ty);
+
         tooltip.style.left = `${tx}px`;
         tooltip.style.top = `${ty}px`;
     }
@@ -394,26 +400,31 @@ function initEarthCanvas() {
     }
 
     let isPaused = false;
-    
+    let didDrag = false;
+
     canvas.addEventListener('mousedown', (e) => {
         const rect = canvas.getBoundingClientRect();
         isDragging = true;
+        didDrag = false;
         dragStartX = e.clientX - rect.left;
         dragStartY = e.clientY - rect.top;
         canvas.style.cursor = 'grabbing';
         tooltip.style.display = 'none';
         e.preventDefault();
     });
-    
+
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         const sx = e.clientX - rect.left;
         const sy = e.clientY - rect.top;
         mouseInCanvas = true;
-        
+
         if (isDragging) {
-            panX += sx - dragStartX;
-            panY += sy - dragStartY;
+            const dx = sx - dragStartX;
+            const dy = sy - dragStartY;
+            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) didDrag = true;
+            panX += dx;
+            panY += dy;
             dragStartX = sx;
             dragStartY = sy;
             tooltip.style.display = 'none';
@@ -431,7 +442,7 @@ function initEarthCanvas() {
                 scheduleDraw();
             }
             if (accident) {
-                showTooltip(accident, sx, sy);
+                showTooltip(accident, e.clientX, e.clientY);
                 canvas.style.cursor = 'pointer';
             } else {
                 tooltip.style.display = 'none';
@@ -440,9 +451,19 @@ function initEarthCanvas() {
         }
     });
     
-    canvas.addEventListener('mouseup', () => {
+    canvas.addEventListener('mouseup', (e) => {
         isDragging = false;
         canvas.style.cursor = 'grab';
+
+        if (!didDrag) {
+            const rect = canvas.getBoundingClientRect();
+            const sx = e.clientX - rect.left;
+            const sy = e.clientY - rect.top;
+            const clicked = findHoveredAccident(sx, sy);
+            if (clicked && clicked.id) {
+                window.location.href = `table.html#${clicked.id}`;
+            }
+        }
     });
     
     canvas.addEventListener('mouseleave', () => {
@@ -470,7 +491,7 @@ function initEarthCanvas() {
             hoveredAccident = accident;
             hoveredAccidentChanged = true;
         }
-        if (accident) showTooltip(accident, sx, sy);
+        if (accident) showTooltip(accident, e.clientX, e.clientY);
         else tooltip.style.display = 'none';
     }, { passive: false });
     
