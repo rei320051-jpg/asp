@@ -66,11 +66,10 @@ function initEarthCanvas() {
 
     function findHoveredAccident(sx, sy) {
         const threshold = 15;
-        // Use cache when available for faster lookup
         if (cachedPositions) {
-            const px = (sx - panX) / zoom;
-            const py = (sy - panY) / zoom;
-            const adjThreshold = threshold / zoom;
+            const px = (sx - panX) / zoom * MAX_ZOOM;
+            const py = (sy - panY) / zoom * MAX_ZOOM;
+            const adjThreshold = threshold / zoom * MAX_ZOOM;
             for (let i = 0; i < cachedPositions.length; i++) {
                 const c = cachedPositions[i];
                 if (!c) continue;
@@ -79,7 +78,6 @@ function initEarthCanvas() {
             }
             return null;
         }
-        // Fallback: direct projection
         for (const accident of AppState.filteredAccidents) {
             const pos = getAccidentScreenPos(accident);
             if (!pos) continue;
@@ -156,10 +154,15 @@ function initEarthCanvas() {
     }
     
     function zoomAt(cx, cy, factor) {
+        const oldZoom = zoom;
         zoom *= factor;
         zoom = Math.max(0.5, Math.min(5, zoom));
-        panX = cx - (cx - panX) * factor;
-        panY = cy - (cy - panY) * factor;
+        
+        const worldX = (cx - panX) / oldZoom;
+        const worldY = (cy - panY) / oldZoom;
+        panX = cx - worldX;
+        panY = cy - worldY;
+        
         updateZoomIndicator();
     }
     
@@ -202,9 +205,6 @@ function initEarthCanvas() {
         canvas.width = cachedW * dpr;
         canvas.height = cachedH * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        offscreen.width = cachedW * dpr;
-        offscreen.height = cachedH * dpr;
-        offCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
         projection = d3.geoNaturalEarth1()
             .scale(cachedW / Math.PI / 1.5)
@@ -213,47 +213,77 @@ function initEarthCanvas() {
         pathGenerator = d3.geoPath().projection(projection);
 
         renderStaticMap();
-        cachedPositions = null;
         needsRedraw = true;
         scheduleDraw();
     }
 
+    const MAX_ZOOM = 5;
     function renderStaticMap() {
         if (!worldGeoJSON || !pathGenerator) return;
         
-        offCtx.clearRect(0, 0, cachedW, cachedH);
+        const renderW = cachedW * MAX_ZOOM;
+        const renderH = cachedH * MAX_ZOOM;
         
-        const bgGradient = offCtx.createLinearGradient(0, 0, 0, cachedH);
+        const dpr = window.devicePixelRatio || 1;
+        offscreen.width = renderW * dpr;
+        offscreen.height = renderH * dpr;
+        offCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        
+        offCtx.clearRect(0, 0, renderW, renderH);
+        
+        const bgGradient = offCtx.createLinearGradient(0, 0, 0, renderH);
         bgGradient.addColorStop(0, '#1a3a6c');
         bgGradient.addColorStop(0.5, '#2a5a94');
         bgGradient.addColorStop(1, '#1a3a6c');
         offCtx.fillStyle = bgGradient;
-        offCtx.fillRect(0, 0, cachedW, cachedH);
+        offCtx.fillRect(0, 0, renderW, renderH);
         
-        const gridStep = 30;
+        const gridStep = 30 * MAX_ZOOM;
         offCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
         offCtx.lineWidth = 1;
         
-        for (let x = 0; x <= cachedW; x += gridStep) {
+        for (let x = 0; x <= renderW; x += gridStep) {
             offCtx.beginPath();
             offCtx.moveTo(x, 0);
-            offCtx.lineTo(x, cachedH);
+            offCtx.lineTo(x, renderH);
             offCtx.stroke();
         }
-        for (let y = 0; y <= cachedH; y += gridStep) {
+        for (let y = 0; y <= renderH; y += gridStep) {
             offCtx.beginPath();
             offCtx.moveTo(0, y);
-            offCtx.lineTo(cachedW, y);
+            offCtx.lineTo(renderW, y);
             offCtx.stroke();
         }
+        
+        const renderProjection = d3.geoNaturalEarth1()
+            .scale(renderW / Math.PI / 1.5)
+            .translate([renderW / 2, renderH / 2]);
+        const renderPathGenerator = d3.geoPath().projection(renderProjection);
         
         offCtx.fillStyle = '#2d5a87';
         offCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
         offCtx.lineWidth = 0.5;
         offCtx.beginPath();
-        pathGenerator.context(offCtx)(worldGeoJSON);
+        renderPathGenerator.context(offCtx)(worldGeoJSON);
         offCtx.fill();
         offCtx.stroke();
+        
+        cachedPositions = buildPositionCacheFromProjection(renderProjection);
+    }
+    
+    function buildPositionCacheFromProjection(renderProjection) {
+        const { filteredAccidents } = AppState;
+        const renderW = cachedW * MAX_ZOOM;
+        const renderH = cachedH * MAX_ZOOM;
+        const cache = new Array(filteredAccidents.length);
+        for (let i = 0; i < filteredAccidents.length; i++) {
+            const a = filteredAccidents[i];
+            const pos = renderProjection([a.longitude, a.latitude]);
+            if (pos) {
+                cache[i] = { x: pos[0], y: pos[1], accident: a };
+            }
+        }
+        return cache;
     }
     
     window.addEventListener('resize', () => {
@@ -262,18 +292,6 @@ function initEarthCanvas() {
         scheduleDraw();
     });
     
-    // 【构建事故点位置缓存 - 避免重复投影计算】
-    function buildPositionCache() {
-        const { filteredAccidents } = AppState;
-        if (!projection) return;
-        cachedPositions = new Array(filteredAccidents.length);
-        for (let i = 0; i < filteredAccidents.length; i++) {
-            const a = filteredAccidents[i];
-            const pos = projection([a.longitude, a.latitude]);
-            cachedPositions[i] = pos ? { x: pos[0], y: pos[1], accident: a } : null;
-        }
-    }
-
     // 【按需调度绘制帧 - 仅在需要时 requestAnimationFrame】
     function scheduleDraw() {
         if (earthAnimationId) return;
@@ -290,6 +308,7 @@ function initEarthCanvas() {
         }, 30);
     }
 
+    let lastZoom = 1;
     function draw() {
         earthAnimationId = null;
 
@@ -311,6 +330,11 @@ function initEarthCanvas() {
             return;
         }
 
+        if (zoom !== lastZoom) {
+            lastZoom = zoom;
+            needsRedraw = true;
+        }
+
         if (!needsRedraw && !isDragging && !hoveredAccidentChanged) {
             return;
         }
@@ -318,22 +342,22 @@ function initEarthCanvas() {
         needsRedraw = false;
         hoveredAccidentChanged = false;
 
-        if (!cachedPositions) buildPositionCache();
-
-        // Scale for DPR — clear physical pixel area
         const dpr = window.devicePixelRatio || 1;
         ctx.clearRect(0, 0, w, h);
 
-        ctx.save();
-        ctx.translate(panX, panY);
-        ctx.scale(zoom, zoom);
-        ctx.drawImage(offscreen, 0, 0, w, h);
-        ctx.restore();
+        const renderW = cachedW * MAX_ZOOM;
+        const renderH = cachedH * MAX_ZOOM;
+        
+        const centerX = renderW / 2 + panX * MAX_ZOOM / zoom;
+        const centerY = renderH / 2 + panY * MAX_ZOOM / zoom;
+        const sourceW = renderW / zoom;
+        const sourceH = renderH / zoom;
+        
+        ctx.drawImage(offscreen, centerX - sourceW / 2, centerY - sourceH / 2, sourceW, sourceH, 0, 0, w, h);
 
         // Batch-render accident points from cached positions (screen coords)
         if (cachedPositions) {
             const len = cachedPositions.length;
-            // Group by fatality severity for batching (fewer state changes)
             const high = [], low = [];
             for (let i = 0; i < len; i++) {
                 const c = cachedPositions[i];
@@ -345,8 +369,8 @@ function initEarthCanvas() {
             const dotScale = Math.pow(zoom, 0.8);
             // Draw low-severity dots
             for (const c of low) {
-                const sx = c.x * zoom + panX;
-                const sy = c.y * zoom + panY;
+                const sx = c.x / MAX_ZOOM * zoom + panX;
+                const sy = c.y / MAX_ZOOM * zoom + panY;
                 const pulse = (Math.sin(sweepAngle * 0.08 + c.accident.latitude + c.accident.longitude) + 1) / 2;
                 const r = 2.5 * dotScale;
                 ctx.beginPath();
@@ -363,8 +387,8 @@ function initEarthCanvas() {
             }
             // Draw high-severity / hovered dots
             for (const c of high) {
-                const sx = c.x * zoom + panX;
-                const sy = c.y * zoom + panY;
+                const sx = c.x / MAX_ZOOM * zoom + panX;
+                const sy = c.y / MAX_ZOOM * zoom + panY;
                 const isHovered = hoveredAccident === c.accident;
                 const baseSize = isHovered ? 7 : 5;
                 const size = baseSize * dotScale;
@@ -542,9 +566,13 @@ function initEarthCanvas() {
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
+            const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const rect = canvas.getBoundingClientRect();
+            const sx = cx - rect.left;
+            const sy = cy - rect.top;
             const factor = dist / touchStartDist;
-            zoom = touchStartZoom * factor;
-            zoom = Math.max(0.5, Math.min(5, zoom));
+            zoomAt(sx, sy, factor);
             needsRedraw = true;
         }
     }, { passive: false });
@@ -574,7 +602,7 @@ function initEarthCanvas() {
     });
 
     document.addEventListener('filtersUpdated', () => {
-        cachedPositions = null;
+        renderStaticMap();
         needsRedraw = true;
         scheduleDraw();
     });
