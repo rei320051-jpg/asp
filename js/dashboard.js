@@ -54,17 +54,14 @@ async function initEarthCanvas() {
         earthAnimationId = null;
     }
 
-    // 动态导入 Three.js
-    let THREE;
-    try {
-        THREE = await import('three');
-        console.log('Three.js loaded successfully');
-    } catch (err) {
-        console.error('Failed to load Three.js:', err);
+    // 检查 Three.js 是否加载成功
+    if (typeof THREE === 'undefined') {
+        console.error('Three.js is not loaded');
         const skeleton = document.querySelector('.map-skeleton');
         if (skeleton) skeleton.innerHTML = '<div class="skeleton-error">Failed to load 3D engine</div>';
         return;
     }
+    console.log('Three.js loaded successfully:', THREE.REVISION);
 
     // ===== 工具提示 =====
     const tooltip = document.createElement('div');
@@ -287,6 +284,13 @@ async function initEarthCanvas() {
     const earthTexture = new THREE.CanvasTexture(texCanvas);
     earthTexture.colorSpace = THREE.SRGBColorSpace;
     earthTexture.anisotropy = 4;
+    
+    console.log('Earth texture created:', earthTexture);
+    console.log('Texture size:', texCanvas.width, 'x', texCanvas.height);
+
+    // 测试纹理内容
+    const testPixel = texCtx.getImageData(TEX_W / 2, TEX_H / 2, 1, 1).data;
+    console.log('Center pixel RGBA:', testPixel);
 
     // ===== 地球球体（降低面数提升性能）=====
     const EARTH_RADIUS = 5;
