@@ -282,7 +282,11 @@ async function initEarthCanvas() {
     }
 
     const earthTexture = new THREE.CanvasTexture(texCanvas);
-    earthTexture.colorSpace = THREE.SRGBColorSpace;
+    if (THREE.SRGBColorSpace) {
+        earthTexture.colorSpace = THREE.SRGBColorSpace;
+    } else {
+        earthTexture.encoding = THREE.sRGBEncoding;
+    }
     earthTexture.anisotropy = 4;
     
     console.log('Earth texture created:', earthTexture);
