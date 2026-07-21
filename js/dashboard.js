@@ -61,7 +61,7 @@ async function initEarthCanvas() {
         if (skeleton) skeleton.innerHTML = '<div class="skeleton-error">Failed to load 3D engine</div>';
         return;
     }
-    console.log('Three.js loaded successfully:', THREE.REVISION);
+    // Three.js 就绪
 
     // ===== 工具提示 =====
     const tooltip = document.createElement('div');
@@ -222,11 +222,8 @@ async function initEarthCanvas() {
     // 加载世界地图数据并绘制国家
     let worldGeoJSON = null;
     try {
-        console.log('Loading world map data...');
         const world = await d3.json('data/countries-110m.json');
-        console.log('World map data loaded:', world && world.type);
         worldGeoJSON = topojson.feature(world, world.objects.countries);
-        console.log('GeoJSON created:', worldGeoJSON && worldGeoJSON.type, worldGeoJSON && worldGeoJSON.features && worldGeoJSON.features.length, 'features');
     } catch (err) {
         console.error('Failed to load world map:', err);
     }
@@ -237,38 +234,32 @@ async function initEarthCanvas() {
             .scale(TEX_W / (2 * Math.PI));
         const eqPath = d3.geoPath().projection(eqProjection).context(texCtx);
 
-        console.log('Projection scale:', TEX_W / (2 * Math.PI));
-        console.log('Projection translate:', [TEX_W / 2, TEX_H / 2]);
-        
-        const testPoint = eqProjection([0, 0]);
-        console.log('Test point [0,0] projected to:', testPoint);
-
-        // 第一层：陆地填充（亮蓝灰渐变）
+        // 第一层：陆地填充（暗蓝灰色调，与深海形成适度对比）
         const landGrad = texCtx.createLinearGradient(0, 0, 0, TEX_H);
-        landGrad.addColorStop(0, '#286098');
-        landGrad.addColorStop(0.5, '#3478b8');
-        landGrad.addColorStop(1, '#286098');
+        landGrad.addColorStop(0, '#1a3d60');
+        landGrad.addColorStop(0.5, '#224d78');
+        landGrad.addColorStop(1, '#1a3d60');
         texCtx.fillStyle = landGrad;
         texCtx.beginPath();
         eqPath(worldGeoJSON);
         texCtx.fill();
 
-        // 第二层：粗白轮廓（shadow 扩散 + 粗描边，一次到位）
+        // 第二层：细白色轮廓线
         texCtx.save();
-        texCtx.shadowColor = 'rgba(255, 255, 255, 0.85)';
-        texCtx.shadowBlur = 18;
-        texCtx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
-        texCtx.lineWidth = 18;
+        texCtx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+        texCtx.shadowBlur = 5;
+        texCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+        texCtx.lineWidth = 4;
         texCtx.lineJoin = 'round';
         texCtx.beginPath();
         eqPath(worldGeoJSON);
         texCtx.stroke();
-        texCtx.stroke();  // 双重描边
+        texCtx.stroke();
         texCtx.restore();
 
-        // 第三层：国界线 —— 较细浅蓝线
-        texCtx.strokeStyle = 'rgba(140, 200, 240, 0.55)';
-        texCtx.lineWidth = 5;
+        // 第三层：国界线 —— 更细的浅蓝线
+        texCtx.strokeStyle = 'rgba(130, 190, 230, 0.5)';
+        texCtx.lineWidth = 2;
         texCtx.lineJoin = 'round';
         texCtx.beginPath();
         eqPath(worldGeoJSON);
@@ -288,13 +279,6 @@ async function initEarthCanvas() {
         earthTexture.encoding = THREE.sRGBEncoding;
     }
     earthTexture.anisotropy = 4;
-    
-    console.log('Earth texture created:', earthTexture);
-    console.log('Texture size:', texCanvas.width, 'x', texCanvas.height);
-
-    // 测试纹理内容
-    const testPixel = texCtx.getImageData(TEX_W / 2, TEX_H / 2, 1, 1).data;
-    console.log('Center pixel RGBA:', testPixel);
 
     // ===== 地球球体（降低面数提升性能）=====
     const EARTH_RADIUS = 5;
@@ -400,13 +384,17 @@ async function initEarthCanvas() {
     const dotTexHigh = createDotTexture('#dd1111', '#880000', 72);   // 高严重度：深血红→暗红光晕
     const dotTexHover = createDotTexture('#ffffff', '#66ccff', 88);  // 悬停：白色→蓝白光晕
 
-    // 经纬度 → 3D坐标
+    // 经纬度 → 3D坐标（精确匹配 Three.js SphereGeometry UV 映射）
+    // u = (lng + 180) / 360  →  phi = u * 2π  →  纹理水平位置→球体经度角
+    // v = (90 - lat) / 180   →  theta = v * π  →  纹理垂直位置→球体纬度角
     function latLngToVec3(lat, lng, radius) {
-        const phi = (90 - lat) * Math.PI / 180;
-        const theta = lng * Math.PI / 180;
+        const u = (lng + 180) / 360;
+        const v = (90 - lat) / 180;
+        const phi = u * Math.PI * 2;    // 绕Y轴方位角（0 在 -X，π 在 +X）
+        const theta = v * Math.PI;       // 从北极的极角（0=北极，π=南极）
         return new THREE.Vector3(
-            -radius * Math.sin(phi) * Math.cos(theta),
-            radius * Math.cos(phi),
+            -radius * Math.cos(phi) * Math.sin(theta),
+            radius * Math.cos(theta),
             radius * Math.sin(phi) * Math.sin(theta)
         );
     }
