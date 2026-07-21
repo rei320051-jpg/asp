@@ -2,6 +2,8 @@
 let trendChart, causeChart, fatalityChart, survivalChart;
 let earthAnimationId;
 let needsRedraw = true;
+// ===== 3D 地球仪全局引用 =====
+let earthGlobe = null;       // { scene, camera, renderer, globe, markers, raycaster, ... }
 // ===== 初始化仪表盘 =====
 document.addEventListener('DOMContentLoaded', async () => {
     const skeleton = document.querySelector('.map-skeleton');
@@ -27,69 +29,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateDashboard();
     });
 });
-// ===== 全球事故地图可视化（D3 + 地图）=====
-function initEarthCanvas() {
+// ===== 3D立体地球仪可视化（Three.js + D3纹理生成）=====
+async function initEarthCanvas() {
     const canvas = document.getElementById('earthCanvas');
     if (!canvas) return;
     if (typeof d3 === 'undefined' || typeof topojson === 'undefined') return;
-    
-    const ctx = canvas.getContext('2d');
-    const offscreen = document.createElement('canvas');
-    const offCtx = offscreen.getContext('2d');
-    let worldGeoJSON = null;
-    let projection = null;
-    let pathGenerator = null;
-    let sweepAngle = 0;
-    let mapReady = false;
-    let hoveredAccidentChanged = false;
-    let cachedPositions = null;
-    
-    let zoom = 1;
-    let panX = 0;
-    let panY = 0;
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragStartY = 0;
-    let mouseInCanvas = false;
-    let hoveredAccident = null;
-    
-    let cachedW = 0, cachedH = 0;
+
+    // 清理旧的地球仪实例
+    if (earthGlobe) {
+        if (earthGlobe.renderer) earthGlobe.renderer.dispose();
+        if (earthGlobe.scene) {
+            earthGlobe.scene.traverse(obj => {
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    if (obj.material.map) obj.material.map.dispose();
+                    obj.material.dispose();
+                }
+            });
+        }
+        earthGlobe = null;
+    }
+    if (earthAnimationId) {
+        cancelAnimationFrame(earthAnimationId);
+        earthAnimationId = null;
+    }
+
+    // 动态导入 Three.js
+    let THREE;
+    try {
+        THREE = await import('three');
+        console.log('Three.js loaded successfully');
+    } catch (err) {
+        console.error('Failed to load Three.js:', err);
+        const skeleton = document.querySelector('.map-skeleton');
+        if (skeleton) skeleton.innerHTML = '<div class="skeleton-error">Failed to load 3D engine</div>';
+        return;
+    }
+
+    // ===== 工具提示 =====
     const tooltip = document.createElement('div');
     tooltip.className = 'map-tooltip';
     canvas.parentElement.appendChild(tooltip);
-    
-    function getAccidentScreenPos(accident) {
-        if (!projection) return null;
-        const [x, y] = projection([accident.longitude, accident.latitude]);
-        return [x * zoom + panX, y * zoom + panY];
-    }
 
-    function findHoveredAccident(sx, sy) {
-        const threshold = 15;
-        if (cachedPositions) {
-            const px = (sx - panX) / zoom * MAX_ZOOM;
-            const py = (sy - panY) / zoom * MAX_ZOOM;
-            const adjThreshold = threshold / zoom * MAX_ZOOM;
-            for (let i = 0; i < cachedPositions.length; i++) {
-                const c = cachedPositions[i];
-                if (!c) continue;
-                const dist = Math.sqrt((px - c.x) ** 2 + (py - c.y) ** 2);
-                if (dist < adjThreshold) return c.accident;
-            }
-            return null;
-        }
-        for (const accident of AppState.filteredAccidents) {
-            const pos = getAccidentScreenPos(accident);
-            if (!pos) continue;
-            const [x, y] = pos;
-            const dist = Math.sqrt((sx - x) ** 2 + (sy - y) ** 2);
-            if (dist < threshold) return accident;
-        }
-        return null;
-    }
-    
     function showTooltip(accident, cx, cy) {
-        const isZh = AppState.currentLang === 'zh';
         tooltip.innerHTML = `
             <div class="tooltip-header">
                 <span class="tooltip-airline">${accident.airline}</span>
@@ -127,488 +109,647 @@ function initEarthCanvas() {
             </div>
         `;
         tooltip.style.display = 'block';
-
-        // Position tooltip in viewport space (position: fixed)
         const padding = 15;
         const tipW = Math.min(320, window.innerWidth - padding * 2);
         let tx = cx + padding;
         let ty = cy + padding;
-
-        // Flip left if would overflow right edge
         if (tx + tipW > window.innerWidth - padding) tx = cx - tipW - padding;
-        // Flip up if would overflow bottom edge
         if (ty + tooltip.offsetHeight > window.innerHeight - padding) ty = cy - tooltip.offsetHeight - padding;
-        // Clamp to prevent overflowing left/top
         tx = Math.max(padding, tx);
         ty = Math.max(padding, ty);
-
         tooltip.style.left = `${tx}px`;
         tooltip.style.top = `${ty}px`;
     }
-    
+
+    // ===== 场景初始化 =====
+    const container = canvas.parentElement;
+    const rect = container.getBoundingClientRect();
+    const W = rect.width;
+    const H = rect.height;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // 限制像素比以保证性能
+
+    // 渲染器
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(dpr);
+    renderer.setClearColor(0x000000, 0);
+
+    // 场景
+    const scene = new THREE.Scene();
+
+    // 相机
+    const camera = new THREE.PerspectiveCamera(42, W / H, 0.5, 100);
+    camera.position.set(0, 1.5, 16);
+    camera.lookAt(0, 0, 0);
+
+    // 光照 —— 降低强度让纹理本色更突出
+    const ambientLight = new THREE.AmbientLight(0x8899cc, 1.0);
+    scene.add(ambientLight);
+    const sunLight = new THREE.DirectionalLight(0xfff8ee, 1.6);
+    sunLight.position.set(15, 8, 10);
+    scene.add(sunLight);
+    const fillLight = new THREE.DirectionalLight(0x8899cc, 0.3);
+    fillLight.position.set(-8, -2, -6);
+    scene.add(fillLight);
+
+    // ===== 星空背景（减少粒子数提升性能）=====
+    const starsGeometry = new THREE.BufferGeometry();
+    const starsCount = 400;
+    const starsPositions = new Float32Array(starsCount * 3);
+    for (let i = 0; i < starsCount; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const r = 40 + Math.random() * 8;
+        starsPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        starsPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        starsPositions[i * 3 + 2] = r * Math.cos(phi);
+    }
+    starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+    const starsMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.12,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    const stars = new THREE.Points(starsGeometry, starsMaterial);
+    scene.add(stars);
+
+    // ===== 地球组 =====
+    const earthGroup = new THREE.Group();
+    scene.add(earthGroup);
+
+    // ===== 地球纹理生成（等距矩形投影 / Equirectangular）=====
+    const TEX_W = 2048;
+    const TEX_H = 1024;
+    const texCanvas = document.createElement('canvas');
+    texCanvas.width = TEX_W;
+    texCanvas.height = TEX_H;
+    const texCtx = texCanvas.getContext('2d');
+
+    // 深海背景 —— 极暗，与陆地形成强烈对比
+    const oceanGrad = texCtx.createLinearGradient(0, 0, 0, TEX_H);
+    oceanGrad.addColorStop(0, '#020d1a');
+    oceanGrad.addColorStop(0.35, '#05152a');
+    oceanGrad.addColorStop(0.5, '#071a35');
+    oceanGrad.addColorStop(0.65, '#05152a');
+    oceanGrad.addColorStop(1, '#020d1a');
+    texCtx.fillStyle = oceanGrad;
+    texCtx.fillRect(0, 0, TEX_W, TEX_H);
+
+    // 经纬网
+    texCtx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    texCtx.lineWidth = 1;
+    for (let lng = -180; lng < 180; lng += 15) {
+        const x = (lng + 180) / 360 * TEX_W;
+        texCtx.beginPath();
+        texCtx.moveTo(x, 0);
+        texCtx.lineTo(x, TEX_H);
+        texCtx.stroke();
+    }
+    for (let lat = -90; lat <= 90; lat += 15) {
+        const y = (90 - lat) / 180 * TEX_H;
+        texCtx.beginPath();
+        texCtx.moveTo(0, y);
+        texCtx.lineTo(TEX_W, y);
+        texCtx.stroke();
+    }
+    // 赤道
+    texCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    texCtx.lineWidth = 2;
+    texCtx.beginPath();
+    texCtx.moveTo(0, TEX_H / 2);
+    texCtx.lineTo(TEX_W, TEX_H / 2);
+    texCtx.stroke();
+
+    // 加载世界地图数据并绘制国家
+    let worldGeoJSON = null;
+    try {
+        console.log('Loading world map data...');
+        const world = await d3.json('data/countries-110m.json');
+        console.log('World map data loaded:', world && world.type);
+        worldGeoJSON = topojson.feature(world, world.objects.countries);
+        console.log('GeoJSON created:', worldGeoJSON && worldGeoJSON.type, worldGeoJSON && worldGeoJSON.features && worldGeoJSON.features.length, 'features');
+    } catch (err) {
+        console.error('Failed to load world map:', err);
+    }
+
+    if (worldGeoJSON) {
+        const eqProjection = d3.geoEquirectangular()
+            .translate([TEX_W / 2, TEX_H / 2])
+            .scale(TEX_W / (2 * Math.PI));
+        const eqPath = d3.geoPath().projection(eqProjection).context(texCtx);
+
+        console.log('Projection scale:', TEX_W / (2 * Math.PI));
+        console.log('Projection translate:', [TEX_W / 2, TEX_H / 2]);
+        
+        const testPoint = eqProjection([0, 0]);
+        console.log('Test point [0,0] projected to:', testPoint);
+
+        // 第一层：陆地填充（亮蓝灰渐变）
+        const landGrad = texCtx.createLinearGradient(0, 0, 0, TEX_H);
+        landGrad.addColorStop(0, '#286098');
+        landGrad.addColorStop(0.5, '#3478b8');
+        landGrad.addColorStop(1, '#286098');
+        texCtx.fillStyle = landGrad;
+        texCtx.beginPath();
+        eqPath(worldGeoJSON);
+        texCtx.fill();
+
+        // 第二层：粗白轮廓（shadow 扩散 + 粗描边，一次到位）
+        texCtx.save();
+        texCtx.shadowColor = 'rgba(255, 255, 255, 0.85)';
+        texCtx.shadowBlur = 18;
+        texCtx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        texCtx.lineWidth = 18;
+        texCtx.lineJoin = 'round';
+        texCtx.beginPath();
+        eqPath(worldGeoJSON);
+        texCtx.stroke();
+        texCtx.stroke();  // 双重描边
+        texCtx.restore();
+
+        // 第三层：国界线 —— 较细浅蓝线
+        texCtx.strokeStyle = 'rgba(140, 200, 240, 0.55)';
+        texCtx.lineWidth = 5;
+        texCtx.lineJoin = 'round';
+        texCtx.beginPath();
+        eqPath(worldGeoJSON);
+        texCtx.stroke();
+    }
+
+    // 扫描线效果（预计算模式，避免逐行 Math.random()）
+    texCtx.fillStyle = 'rgba(255, 255, 255, 0.006)';
+    for (let y = 0; y < TEX_H; y += 6) {
+        texCtx.fillRect(0, y, TEX_W, 1);
+    }
+
+    const earthTexture = new THREE.CanvasTexture(texCanvas);
+    earthTexture.colorSpace = THREE.SRGBColorSpace;
+    earthTexture.anisotropy = 4;
+
+    // ===== 地球球体（降低面数提升性能）=====
+    const EARTH_RADIUS = 5;
+    const earthGeometry = new THREE.SphereGeometry(EARTH_RADIUS, 56, 36);
+    const earthMaterial = new THREE.MeshStandardMaterial({
+        map: earthTexture,
+        roughness: 0.75,
+        metalness: 0.05,
+        emissive: 0x000811,
+        emissiveIntensity: 0.15
+    });
+    const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
+    earthGroup.add(earthMesh);
+
+    // ===== 大气层光晕（降低面数）=====
+    const atmosGeometry = new THREE.SphereGeometry(EARTH_RADIUS * 1.025, 48, 30);
+    const atmosVertexShader = `
+        varying vec3 vNormal;
+        varying vec3 vWorldPosition;
+        void main() {
+            vec4 worldPos = modelMatrix * vec4(position, 1.0);
+            vWorldPosition = worldPos.xyz;
+            vNormal = normalize(mat3(modelMatrix) * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `;
+    const atmosFragmentShader = `
+        varying vec3 vNormal;
+        varying vec3 vWorldPosition;
+        uniform vec3 uViewPosition;
+        void main() {
+            vec3 viewDir = normalize(uViewPosition - vWorldPosition);
+            float fresnel = 1.0 - abs(dot(viewDir, normalize(vNormal)));
+            fresnel = pow(fresnel, 2.8);
+            float alpha = fresnel * 0.55;
+            gl_FragColor = vec4(0.2, 0.65, 1.0, alpha);
+        }
+    `;
+    const atmosMaterial = new THREE.ShaderMaterial({
+        vertexShader: atmosVertexShader,
+        fragmentShader: atmosFragmentShader,
+        uniforms: {
+            uViewPosition: { value: camera.position }
+        },
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    const atmosphere = new THREE.Mesh(atmosGeometry, atmosMaterial);
+    earthGroup.add(atmosphere);
+
+    // 外层大气环（降低面数）
+    const outerAtmosGeometry = new THREE.SphereGeometry(EARTH_RADIUS * 1.08, 36, 22);
+    const outerAtmosMaterial = new THREE.ShaderMaterial({
+        vertexShader: atmosVertexShader,
+        fragmentShader: `
+            varying vec3 vNormal;
+            varying vec3 vWorldPosition;
+            uniform vec3 uViewPosition;
+            void main() {
+                vec3 viewDir = normalize(uViewPosition - vWorldPosition);
+                float fresnel = 1.0 - abs(dot(viewDir, normalize(vNormal)));
+                fresnel = pow(fresnel, 5.0);
+                float alpha = fresnel * 0.2;
+                gl_FragColor = vec4(0.0, 0.5, 0.9, alpha);
+            }
+        `,
+        uniforms: {
+            uViewPosition: { value: camera.position }
+        },
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    const outerAtmosphere = new THREE.Mesh(outerAtmosGeometry, outerAtmosMaterial);
+    earthGroup.add(outerAtmosphere);
+
+    // ===== 事故标记系统 =====
+    const markersGroup = new THREE.Group();
+    earthGroup.add(markersGroup);
+
+    // 生成标记精灵贴图（高饱和度、带光晕）
+    function createDotTexture(innerColor, outerColor, size) {
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const ctx = c.getContext('2d');
+        const half = size / 2;
+        const grad = ctx.createRadialGradient(half, half, size * 0.02, half, half, half);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        grad.addColorStop(0.08, innerColor);
+        grad.addColorStop(0.25, innerColor);
+        grad.addColorStop(0.5, outerColor);
+        grad.addColorStop(0.8, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+        const tex = new THREE.CanvasTexture(c);
+        tex.needsUpdate = true;
+        return tex;
+    }
+
+    const dotTexLow = createDotTexture('#ffdd00', '#ff8800', 64);    // 低严重度：亮黄→橙光晕
+    const dotTexHigh = createDotTexture('#dd1111', '#880000', 72);   // 高严重度：深血红→暗红光晕
+    const dotTexHover = createDotTexture('#ffffff', '#66ccff', 88);  // 悬停：白色→蓝白光晕
+
+    // 经纬度 → 3D坐标
+    function latLngToVec3(lat, lng, radius) {
+        const phi = (90 - lat) * Math.PI / 180;
+        const theta = lng * Math.PI / 180;
+        return new THREE.Vector3(
+            -radius * Math.sin(phi) * Math.cos(theta),
+            radius * Math.cos(phi),
+            radius * Math.sin(phi) * Math.sin(theta)
+        );
+    }
+
+    // ===== 共享材质（3 个实例替代 83 个，大幅减少 GPU 开销）=====
+    const sharedMatLow = new THREE.SpriteMaterial({
+        map: dotTexLow, blending: THREE.AdditiveBlending,
+        depthWrite: false, depthTest: true, transparent: true, opacity: 0.95
+    });
+    const sharedMatHigh = new THREE.SpriteMaterial({
+        map: dotTexHigh, blending: THREE.AdditiveBlending,
+        depthWrite: false, depthTest: true, transparent: true, opacity: 0.95
+    });
+    const sharedMatHover = new THREE.SpriteMaterial({
+        map: dotTexHover, blending: THREE.AdditiveBlending,
+        depthWrite: false, depthTest: true, transparent: true, opacity: 1
+    });
+
+    // 存储标记数据
+    let markerDataList = []; // { accident, sprite, position }
+
+    function clearMarkers() {
+        // 不再逐个销毁材质（使用共享材质），直接移除子对象
+        while (markersGroup.children.length > 0) {
+            markersGroup.remove(markersGroup.children[0]);
+        }
+        markerDataList = [];
+    }
+
+    function createMarkers() {
+        clearMarkers();
+        const { filteredAccidents } = AppState;
+        const spriteScale = EARTH_RADIUS * 0.05;
+
+        for (const accident of filteredAccidents) {
+            const pos = latLngToVec3(accident.latitude, accident.longitude, EARTH_RADIUS * 1.02);
+            const isHigh = accident.fatalities > 50;
+            // 所有同类型精灵共享材质，不再每个精灵创建一个材质实例
+            const sprite = new THREE.Sprite(isHigh ? sharedMatHigh : sharedMatLow);
+            sprite.position.copy(pos);
+            sprite.scale.set(spriteScale, spriteScale, 1);
+            sprite.userData = { accident, isHigh };
+            markersGroup.add(sprite);
+            markerDataList.push({ accident, sprite, baseScale: spriteScale });
+        }
+    }
+
+    // ===== 交互状态 =====
+    let isDragging = false;
+    let dragPrevX = 0;
+    let dragPrevY = 0;
+    let didDrag = false;
+    let autoRotateSpeed = 0.15; // 自动旋转速度（度/秒）
+    let autoRotateEnabled = true;
+    let targetZoom = 16;
+    let currentZoom = 16;
+    const MIN_ZOOM = 7;
+    const MAX_ZOOM = 28;
+    let hoveredMarker = null;
+
+    // ===== 射线检测 =====
+    const raycaster = new THREE.Raycaster();
+    raycaster.params.Points.threshold = 0.5;
+    raycaster.params.Sprite.threshold = 0.5;
+
+    function getIntersections(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2();
+        mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const targets = markersGroup.children.length > 0 ? markersGroup.children : [earthMesh];
+        return raycaster.intersectObjects(targets, false);
+    }
+
+    // ===== 缩放指示器 =====
     function updateZoomIndicator() {
         const indicator = document.querySelector('.map-zoom-indicator');
         if (indicator) {
-            indicator.textContent = `${Math.round(zoom * 100)}%`;
+            const pct = Math.round((currentZoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM) * 100);
+            indicator.textContent = `${pct}%`;
         }
     }
-    
-    function zoomAt(cx, cy, factor) {
-        const oldZoom = zoom;
-        zoom *= factor;
-        zoom = Math.max(0.5, Math.min(5, zoom));
-        
-        const worldX = (cx - panX) / oldZoom;
-        const worldY = (cy - panY) / oldZoom;
-        panX = cx - worldX;
-        panY = cy - worldY;
-        
-        updateZoomIndicator();
-    }
-    
+
+    // ===== 重置视图 =====
     function resetView() {
-        zoom = 1;
-        panX = 0;
-        panY = 0;
+        targetZoom = 16;
+        earthGroup.rotation.set(0.35, 0, 0);
+        autoRotateEnabled = true;
         updateZoomIndicator();
-        needsRedraw = true;
-        scheduleDraw();
-    }
-    
-    d3.json('data/countries-110m.json').then(world => {
-        worldGeoJSON = topojson.feature(world, world.objects.countries);
-        resize();
-        mapReady = true;
-        startSweep();
-
-        setTimeout(() => {
-            const skeleton = document.querySelector('.map-skeleton');
-            if (skeleton) skeleton.classList.add('hidden');
-        }, 300);
-
-        draw();
-    }).catch(error => {
-        console.error('Failed to load world map:', error);
-        const skeleton = document.querySelector('.map-skeleton');
-        if (skeleton) {
-            skeleton.innerHTML = '<div class="skeleton-error">Failed to load map data</div>';
-        }
-    });
-    
-    function resize() {
-        const container = canvas.parentElement;
-        const rect = container.getBoundingClientRect();
-        cachedW = rect.width;
-        cachedH = rect.height;
-
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = cachedW * dpr;
-        canvas.height = cachedH * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-        projection = d3.geoNaturalEarth1()
-            .scale(cachedW / Math.PI / 1.5)
-            .translate([cachedW / 2, cachedH / 2]);
-
-        pathGenerator = d3.geoPath().projection(projection);
-
-        renderStaticMap();
-        needsRedraw = true;
-        scheduleDraw();
     }
 
-    const MAX_ZOOM = 5;
-    function renderStaticMap() {
-        if (!worldGeoJSON || !pathGenerator) return;
-        
-        const renderW = cachedW * MAX_ZOOM;
-        const renderH = cachedH * MAX_ZOOM;
-        
-        const dpr = window.devicePixelRatio || 1;
-        offscreen.width = renderW * dpr;
-        offscreen.height = renderH * dpr;
-        offCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        
-        offCtx.clearRect(0, 0, renderW, renderH);
-        
-        const bgGradient = offCtx.createLinearGradient(0, 0, 0, renderH);
-        bgGradient.addColorStop(0, '#1a3a6c');
-        bgGradient.addColorStop(0.5, '#2a5a94');
-        bgGradient.addColorStop(1, '#1a3a6c');
-        offCtx.fillStyle = bgGradient;
-        offCtx.fillRect(0, 0, renderW, renderH);
-        
-        const gridStep = 30 * MAX_ZOOM;
-        offCtx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-        offCtx.lineWidth = 1;
-        
-        for (let x = 0; x <= renderW; x += gridStep) {
-            offCtx.beginPath();
-            offCtx.moveTo(x, 0);
-            offCtx.lineTo(x, renderH);
-            offCtx.stroke();
-        }
-        for (let y = 0; y <= renderH; y += gridStep) {
-            offCtx.beginPath();
-            offCtx.moveTo(0, y);
-            offCtx.lineTo(renderW, y);
-            offCtx.stroke();
-        }
-        
-        const renderProjection = d3.geoNaturalEarth1()
-            .scale(renderW / Math.PI / 1.5)
-            .translate([renderW / 2, renderH / 2]);
-        const renderPathGenerator = d3.geoPath().projection(renderProjection);
-        
-        offCtx.fillStyle = '#2d5a87';
-        offCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-        offCtx.lineWidth = 0.5;
-        offCtx.beginPath();
-        renderPathGenerator.context(offCtx)(worldGeoJSON);
-        offCtx.fill();
-        offCtx.stroke();
-        
-        cachedPositions = buildPositionCacheFromProjection(renderProjection);
-    }
-    
-    function buildPositionCacheFromProjection(renderProjection) {
-        const { filteredAccidents } = AppState;
-        const renderW = cachedW * MAX_ZOOM;
-        const renderH = cachedH * MAX_ZOOM;
-        const cache = new Array(filteredAccidents.length);
-        for (let i = 0; i < filteredAccidents.length; i++) {
-            const a = filteredAccidents[i];
-            const pos = renderProjection([a.longitude, a.latitude]);
-            if (pos) {
-                cache[i] = { x: pos[0], y: pos[1], accident: a };
-            }
-        }
-        return cache;
-    }
-    
-    window.addEventListener('resize', () => {
-        resize();
-        needsRedraw = true;
-        scheduleDraw();
-    });
-    
-    // 【按需调度绘制帧 - 仅在需要时 requestAnimationFrame】
-    function scheduleDraw() {
-        if (earthAnimationId) return;
-        earthAnimationId = requestAnimationFrame(draw);
-    }
-
-    let sweepTimer = null;
-    function startSweep() {
-        if (sweepTimer) return;
-        sweepTimer = setInterval(() => {
-            sweepAngle += 3;
-            needsRedraw = true;
-            scheduleDraw();
-        }, 30);
-    }
-
-    let lastZoom = 1;
-    function draw() {
-        earthAnimationId = null;
-
-        if (isPaused) return;
-
-        const container = canvas.parentElement;
-        const rect = container.getBoundingClientRect();
-        const w = rect.width;
-        const h = rect.height;
-
-        if (w !== cachedW || h !== cachedH) {
-            cachedW = w;
-            cachedH = h;
-            needsRedraw = true;
-        }
-
-        if (!mapReady) {
-            scheduleDraw();
-            return;
-        }
-
-        if (zoom !== lastZoom) {
-            lastZoom = zoom;
-            needsRedraw = true;
-        }
-
-        if (!needsRedraw && !isDragging && !hoveredAccidentChanged) {
-            return;
-        }
-
-        needsRedraw = false;
-        hoveredAccidentChanged = false;
-
-        const dpr = window.devicePixelRatio || 1;
-        ctx.clearRect(0, 0, w, h);
-
-        const renderW = cachedW * MAX_ZOOM;
-        const renderH = cachedH * MAX_ZOOM;
-        
-        const centerX = renderW / 2 + panX * MAX_ZOOM / zoom;
-        const centerY = renderH / 2 + panY * MAX_ZOOM / zoom;
-        const sourceW = renderW / zoom;
-        const sourceH = renderH / zoom;
-        
-        ctx.drawImage(offscreen, centerX - sourceW / 2, centerY - sourceH / 2, sourceW, sourceH, 0, 0, w, h);
-
-        // Batch-render accident points from cached positions (screen coords)
-        if (cachedPositions) {
-            const len = cachedPositions.length;
-            const high = [], low = [];
-            for (let i = 0; i < len; i++) {
-                const c = cachedPositions[i];
-                if (!c) continue;
-                const isHovered = hoveredAccident === c.accident;
-                if (isHovered || c.accident.fatalities > 50) high.push(c);
-                else low.push(c);
-            }
-            const dotScale = Math.pow(zoom, 0.8);
-            // Draw low-severity dots
-            for (const c of low) {
-                const sx = c.x / MAX_ZOOM * zoom + panX;
-                const sy = c.y / MAX_ZOOM * zoom + panY;
-                const pulse = (Math.sin(sweepAngle * 0.08 + c.accident.latitude + c.accident.longitude) + 1) / 2;
-                const r = 2.5 * dotScale;
-                ctx.beginPath();
-                ctx.arc(sx, sy, r * 2 + pulse * 3 * dotScale, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(sx, sy, r, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffb800';
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.lineWidth = 1 * dotScale;
-                ctx.stroke();
-            }
-            // Draw high-severity / hovered dots
-            for (const c of high) {
-                const sx = c.x / MAX_ZOOM * zoom + panX;
-                const sy = c.y / MAX_ZOOM * zoom + panY;
-                const isHovered = hoveredAccident === c.accident;
-                const baseSize = isHovered ? 7 : 5;
-                const size = baseSize * dotScale;
-                const pulse = (Math.sin(sweepAngle * 0.08 + c.accident.latitude + c.accident.longitude) + 1) / 2;
-                ctx.beginPath();
-                ctx.arc(sx, sy, size * 2 + pulse * 3 * dotScale, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 51, 68, ${0.15 + pulse * 0.25})`;
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(sx, sy, size, 0, Math.PI * 2);
-                ctx.fillStyle = '#ff3344';
-                ctx.fill();
-                ctx.strokeStyle = isHovered ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
-                ctx.lineWidth = (isHovered ? 2.5 : 1) * dotScale;
-                ctx.stroke();
-            }
-        }
-
-        const sweepX = ((sweepAngle * 0.8) % (w + 200)) - 100;
-        const sweepGradient = ctx.createLinearGradient(sweepX - 80, 0, sweepX + 80, 0);
-        sweepGradient.addColorStop(0, 'rgba(0, 200, 255, 0)');
-        sweepGradient.addColorStop(0.5, 'rgba(0, 200, 255, 0.15)');
-        sweepGradient.addColorStop(1, 'rgba(0, 200, 255, 0)');
-        ctx.fillStyle = sweepGradient;
-        ctx.fillRect(0, 0, w, h);
-        
-        ctx.strokeStyle = 'rgba(0, 200, 255, 0.6)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(sweepX, 0);
-        ctx.lineTo(sweepX, h);
-        ctx.stroke();
-        
-        sweepAngle++;
-    }
-
-    let isPaused = false;
-    let didDrag = false;
-
+    // ===== 鼠标事件 =====
     canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect();
         isDragging = true;
         didDrag = false;
-        dragStartX = e.clientX - rect.left;
-        dragStartY = e.clientY - rect.top;
+        dragPrevX = e.clientX;
+        dragPrevY = e.clientY;
+        autoRotateEnabled = false;
         canvas.style.cursor = 'grabbing';
         tooltip.style.display = 'none';
         e.preventDefault();
     });
 
-    canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const sx = e.clientX - rect.left;
-        const sy = e.clientY - rect.top;
-        mouseInCanvas = true;
+    // 拖拽用缓存向量
+    const _dragVecY = new THREE.Vector3(0, 1, 0);
+    const _dragVecX = new THREE.Vector3(1, 0, 0);
 
+    canvas.addEventListener('mousemove', (e) => {
         if (isDragging) {
-            const dx = sx - dragStartX;
-            const dy = sy - dragStartY;
-            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) didDrag = true;
-            panX += dx;
-            panY += dy;
-            dragStartX = sx;
-            dragStartY = sy;
+            const dx = e.clientX - dragPrevX;
+            const dy = e.clientY - dragPrevY;
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) didDrag = true;
+            earthGroup.rotateOnWorldAxis(_dragVecY, dx * 0.005);
+            _dragVecX.set(1, 0, 0).applyQuaternion(earthGroup.quaternion).normalize();
+            earthGroup.rotateOnWorldAxis(_dragVecX, dy * 0.005);
+            dragPrevX = e.clientX;
+            dragPrevY = e.clientY;
             tooltip.style.display = 'none';
-            if (hoveredAccident !== null) {
-                hoveredAccident = null;
-                hoveredAccidentChanged = true;
-            }
-            needsRedraw = true;
-            scheduleDraw();
         } else {
-            const accident = findHoveredAccident(sx, sy);
-            if (accident !== hoveredAccident) {
-                hoveredAccident = accident;
-                hoveredAccidentChanged = true;
-                scheduleDraw();
-            }
-            if (accident) {
-                showTooltip(accident, e.clientX, e.clientY);
-                canvas.style.cursor = 'pointer';
-            } else {
+            const intersections = getIntersections(e.clientX, e.clientY);
+            const hit = intersections.find(i => i.object.userData && i.object.userData.accident);
+            if (hit && hit.object.userData.accident !== (hoveredMarker ? hoveredMarker.accident : null)) {
+                // 悬停标记：切换到共享高亮材质
+                if (hoveredMarker) {
+                    hoveredMarker.sprite.material = hoveredMarker.sprite.userData.isHigh ? sharedMatHigh : sharedMatLow;
+                }
+                hoveredMarker = markerDataList.find(m => m.sprite === hit.object);
+                if (hoveredMarker) {
+                    hoveredMarker.sprite.material = sharedMatHover;
+                    hoveredMarker.sprite.scale.set(hoveredMarker.baseScale * 1.5, hoveredMarker.baseScale * 1.5, 1);
+                    canvas.style.cursor = 'pointer';
+                    const vec = hoveredMarker.sprite.position.clone();
+                    earthGroup.localToWorld(vec);
+                    vec.project(camera);
+                    const sx = (vec.x * 0.5 + 0.5) * canvas.clientWidth + canvas.getBoundingClientRect().left;
+                    const sy = (-vec.y * 0.5 + 0.5) * canvas.clientHeight + canvas.getBoundingClientRect().top;
+                    showTooltip(hoveredMarker.accident, sx, sy);
+                }
+            } else if (!hit && hoveredMarker) {
+                // 取消悬停：恢复原始共享材质
+                const prev = hoveredMarker;
+                hoveredMarker = null;
+                prev.sprite.material = prev.sprite.userData.isHigh ? sharedMatHigh : sharedMatLow;
+                prev.sprite.scale.set(prev.baseScale, prev.baseScale, 1);
                 tooltip.style.display = 'none';
+                canvas.style.cursor = 'grab';
+            }
+            if (!hit && !hoveredMarker && canvas.style.cursor !== 'grab') {
                 canvas.style.cursor = 'grab';
             }
         }
     });
-    
-    canvas.addEventListener('mouseup', (e) => {
-        isDragging = false;
-        canvas.style.cursor = 'grab';
 
-        if (!didDrag) {
-            const rect = canvas.getBoundingClientRect();
-            const sx = e.clientX - rect.left;
-            const sy = e.clientY - rect.top;
-            const clicked = findHoveredAccident(sx, sy);
-            if (clicked && clicked.id) {
-                window.location.href = `table.html#${clicked.id}`;
-            }
+    canvas.addEventListener('mouseup', () => {
+        isDragging = false;
+        canvas.style.cursor = hoveredMarker ? 'pointer' : 'grab';
+        // 释放后1.5秒恢复自动旋转
+        setTimeout(() => { if (!isDragging) autoRotateEnabled = true; }, 1500);
+        if (!didDrag && hoveredMarker && hoveredMarker.accident.id) {
+            window.location.href = `table.html#${hoveredMarker.accident.id}`;
         }
     });
-    
+
     canvas.addEventListener('mouseleave', () => {
         isDragging = false;
-        mouseInCanvas = false;
-        if (hoveredAccident !== null) {
-            hoveredAccident = null;
-            hoveredAccidentChanged = true;
-        }
-        tooltip.style.display = 'none';
         canvas.style.cursor = 'grab';
+        tooltip.style.display = 'none';
+        if (hoveredMarker) {
+            const prev = hoveredMarker;
+            hoveredMarker = null;
+            prev.sprite.material = prev.sprite.userData.isHigh ? sharedMatHigh : sharedMatLow;
+            prev.sprite.scale.set(prev.baseScale, prev.baseScale, 1);
+        }
+        autoRotateEnabled = true;
     });
-    
+
+    // 滚轮缩放
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const sx = e.clientX - rect.left;
-        const sy = e.clientY - rect.top;
-        const factor = e.deltaY < 0 ? 1.2 : 1 / 1.2;
-        zoomAt(sx, sy, factor);
-        needsRedraw = true;
-        scheduleDraw();
-        const accident = findHoveredAccident(sx, sy);
-        if (accident !== hoveredAccident) {
-            hoveredAccident = accident;
-            hoveredAccidentChanged = true;
-        }
-        if (accident) showTooltip(accident, e.clientX, e.clientY);
-        else tooltip.style.display = 'none';
+        const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom * factor));
+        updateZoomIndicator();
     }, { passive: false });
-    
+
+    // 双击重置
     canvas.addEventListener('dblclick', () => {
         resetView();
     });
-    
-    // ===== Touch Events for Mobile =====
+
+    // ===== 触摸事件 =====
     let touchStartDist = 0;
-    let touchStartZoom = 1;
-    
+    let touchStartZoom = 0;
+    let touchPrevX = 0;
+    let touchPrevY = 0;
+
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
         if (e.touches.length === 1) {
             isDragging = true;
-            dragStartX = e.touches[0].clientX - rect.left;
-            dragStartY = e.touches[0].clientY - rect.top;
+            didDrag = false;
+            autoRotateEnabled = false;
+            touchPrevX = e.touches[0].clientX;
+            touchPrevY = e.touches[0].clientY;
             tooltip.style.display = 'none';
-            if (hoveredAccident !== null) {
-                hoveredAccident = null;
-                hoveredAccidentChanged = true;
-            }
         } else if (e.touches.length === 2) {
             touchStartDist = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
-            touchStartZoom = zoom;
+            touchStartZoom = targetZoom;
         }
     }, { passive: false });
-    
+
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
         if (e.touches.length === 1 && isDragging) {
-            const sx = e.touches[0].clientX - rect.left;
-            const sy = e.touches[0].clientY - rect.top;
-            panX += sx - dragStartX;
-            panY += sy - dragStartY;
-            dragStartX = sx;
-            dragStartY = sy;
-            needsRedraw = true;
+            const dx = e.touches[0].clientX - touchPrevX;
+            const dy = e.touches[0].clientY - touchPrevY;
+            if (Math.abs(dx) > 2 || Math.abs(dy) > 2) didDrag = true;
+            earthGroup.rotateOnWorldAxis(_dragVecY, dx * 0.005);
+            _dragVecX.set(1, 0, 0).applyQuaternion(earthGroup.quaternion).normalize();
+            earthGroup.rotateOnWorldAxis(_dragVecX, dy * 0.005);
+            touchPrevX = e.touches[0].clientX;
+            touchPrevY = e.touches[0].clientY;
         } else if (e.touches.length === 2) {
             const dist = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             );
-            const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-            const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            const rect = canvas.getBoundingClientRect();
-            const sx = cx - rect.left;
-            const sy = cy - rect.top;
-            const factor = dist / touchStartDist;
-            zoomAt(sx, sy, factor);
-            needsRedraw = true;
+            targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, touchStartZoom * (dist / touchStartDist)));
+            updateZoomIndicator();
         }
     }, { passive: false });
-    
+
     canvas.addEventListener('touchend', (e) => {
         e.preventDefault();
         isDragging = false;
-        if (e.touches.length === 0) {
-            tooltip.style.display = 'none';
-        }
+        setTimeout(() => { if (!isDragging) autoRotateEnabled = true; }, 1500);
+        tooltip.style.display = 'none';
     }, { passive: false });
-    
+
+    // ===== 缩放按钮 =====
     document.getElementById('mapZoomIn')?.addEventListener('click', () => {
-        const w = canvas.offsetWidth, h = canvas.offsetHeight;
-        zoomAt(w / 2, h / 2, 1.4);
-        needsRedraw = true;
-        scheduleDraw();
+        targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom / 1.35));
+        updateZoomIndicator();
     });
     document.getElementById('mapZoomOut')?.addEventListener('click', () => {
-        const w = canvas.offsetWidth, h = canvas.offsetHeight;
-        zoomAt(w / 2, h / 2, 1 / 1.4);
-        needsRedraw = true;
-        scheduleDraw();
+        targetZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, targetZoom * 1.35));
+        updateZoomIndicator();
     });
     document.getElementById('mapReset')?.addEventListener('click', () => {
         resetView();
     });
 
+    // ===== 筛选器更新 =====
     document.addEventListener('filtersUpdated', () => {
-        renderStaticMap();
-        needsRedraw = true;
-        scheduleDraw();
+        createMarkers();
     });
 
+    // ===== 窗口大小调整（防抖处理，避免频繁重建）=====
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            const rect = container.getBoundingClientRect();
+            const w = rect.width;
+            const h = rect.height;
+            if (w > 0 && h > 0) {
+                renderer.setSize(w, h);
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+            }
+        }, 150);
+    });
+
+    // ===== 隐藏骨架屏 =====
+    setTimeout(() => {
+        const skeleton = document.querySelector('.map-skeleton');
+        if (skeleton) skeleton.classList.add('hidden');
+    }, 300);
+
+    // ===== 初始标记和指示器 =====
+    createMarkers();
     updateZoomIndicator();
-    draw();
+
+    // ===== 渲染循环（优化：缓存对象、空闲降帧、避免 GC）=====
+    const _rotAxisY = new THREE.Vector3(0, 1, 0);  // 缓存旋转轴
+    const IDLE_SKIP = 5;  // 空闲时每 6 帧渲染 1 次 ≈ 10fps
+    let _lastFrameTime = performance.now();
+    let _idleFrames = 0;
+
+    function animate(now) {
+        earthAnimationId = requestAnimationFrame(animate);
+
+        const rawDt = (now - _lastFrameTime) / 1000;
+        const dt = Math.min(rawDt, 0.1);
+        _lastFrameTime = now;
+
+        const isZooming = Math.abs(targetZoom - currentZoom) > 0.02;
+        const isRotating = autoRotateEnabled && !isDragging;
+
+        // 空闲帧跳过：无交互时降低渲染频率
+        if (!isRotating && !isZooming && !isDragging) {
+            _idleFrames++;
+            if (_idleFrames % (IDLE_SKIP + 1) !== 0) return;
+        } else {
+            _idleFrames = 0;
+        }
+
+        // 自动旋转（复用缓存的 Vector3，避免 GC）
+        if (isRotating) {
+            earthGroup.rotateOnWorldAxis(_rotAxisY, autoRotateSpeed * dt * (Math.PI / 180));
+        }
+
+        // 平滑缩放
+        if (isZooming) {
+            currentZoom += (targetZoom - currentZoom) * 8 * dt;
+            if (Math.abs(targetZoom - currentZoom) < 0.01) currentZoom = targetZoom;
+        }
+        camera.position.z = currentZoom;
+
+        // 相机位置变动时才更新大气着色器
+        if (isZooming || isRotating || isDragging) {
+            atmosMaterial.uniforms.uViewPosition.value.copy(camera.position);
+            outerAtmosMaterial.uniforms.uViewPosition.value.copy(camera.position);
+        }
+
+        // 标记脉冲（用 rAF 时间戳，避免额外 performance.now() 调用）
+        const time = now * 0.001;
+        for (let i = 0, len = markerDataList.length; i < len; i++) {
+            const md = markerDataList[i];
+            if (hoveredMarker && md === hoveredMarker) continue;
+            md.sprite.scale.setScalar(md.baseScale * (1 + Math.sin(time * 2.5 + i * 0.3) * 0.12));
+        }
+
+        renderer.render(scene, camera);
+    }
+
+    // 存储全局引用
+    earthGlobe = {
+        scene, camera, renderer, earthGroup, markersGroup,
+        raycaster, markerDataList, createMarkers, clearMarkers,
+        get targetZoom() { return targetZoom; },
+        set targetZoom(v) { targetZoom = v; },
+        get autoRotateEnabled() { return autoRotateEnabled; },
+        set autoRotateEnabled(v) { autoRotateEnabled = v; },
+        resetView, updateZoomIndicator
+    };
+
+    animate(performance.now());
 }
 // ===== 初始化图表（Chart.js）=====
 function initCharts() {
