@@ -2,8 +2,8 @@
 /* World Map / 3D Globe Container */
 .earth-container {
     width: 100%;
-    height: clamp(440px, 62vh, 750px);
-    min-height: 380px;
+    height: clamp(520px, 72vh, 880px);
+    min-height: 420px;
     position: relative;
     overflow: hidden;
     border: 1px solid rgba(0, 102, 204, 0.4);
@@ -285,6 +285,26 @@
     width: 100% !important;
     height: 100% !important;
 }
+/* Key Insights Summary */
+.insights-summary {
+    margin-bottom: 2rem;
+    padding: 1rem 1.4rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.insights-summary p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+.insights-summary .hi-red { color: #ff3344; font-weight: 700; }
+.insights-summary .hi-yellow { color: #ffb800; font-weight: 700; }
+.insights-summary .hi-green { color: #00cc88; font-weight: 700; }
+.insights-summary .hi-blue { color: var(--color-primary); font-weight: 700; }
+
 /* Quick Stats Bar */
 .quick-stats {
     display: flex;
@@ -405,8 +425,8 @@
     }
     
     .earth-container {
-        height: clamp(340px, 50vh, 500px);
-        min-height: 300px;
+        height: clamp(380px, 55vh, 550px);
+        min-height: 320px;
     }
     
     .chart-container {

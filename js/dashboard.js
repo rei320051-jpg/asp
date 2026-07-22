@@ -1,7 +1,6 @@
 // ===== 仪表盘主逻辑 =====
 let trendChart, causeChart, fatalityChart, survivalChart;
 let earthAnimationId;
-let needsRedraw = true;
 // ===== 3D 地球仪全局引用 =====
 let earthGlobe = null;       // { scene, camera, renderer, globe, markers, raycaster, ... }
 // ===== 初始化仪表盘 =====
@@ -39,10 +38,16 @@ async function initEarthCanvas() {
     if (earthGlobe) {
         if (earthGlobe.renderer) earthGlobe.renderer.dispose();
         if (earthGlobe.scene) {
+            const disposedMats = new Set();
+            const disposedTexs = new Set();
             earthGlobe.scene.traverse(obj => {
                 if (obj.geometry) obj.geometry.dispose();
-                if (obj.material) {
-                    if (obj.material.map) obj.material.map.dispose();
+                if (obj.material && !disposedMats.has(obj.material)) {
+                    disposedMats.add(obj.material);
+                    if (obj.material.map && !disposedTexs.has(obj.material.map)) {
+                        disposedTexs.add(obj.material.map);
+                        obj.material.map.dispose();
+                    }
                     obj.material.dispose();
                 }
             });
@@ -54,6 +59,12 @@ async function initEarthCanvas() {
         earthAnimationId = null;
     }
 
+    // 更新加载阶段
+    const skeletonStage = document.getElementById('skeletonStage');
+    function setSkeletonStage(key) {
+        if (skeletonStage) skeletonStage.textContent = t(key);
+    }
+
     // 检查 Three.js 是否加载成功
     if (typeof THREE === 'undefined') {
         console.error('Three.js is not loaded');
@@ -61,7 +72,7 @@ async function initEarthCanvas() {
         if (skeleton) skeleton.innerHTML = '<div class="skeleton-error">Failed to load 3D engine</div>';
         return;
     }
-    // Three.js 就绪
+    setSkeletonStage('map.loadingMap');  // "绘制世界地图"
 
     // ===== 工具提示 =====
     const tooltip = document.createElement('div');
@@ -174,11 +185,13 @@ async function initEarthCanvas() {
 
     // ===== 地球组 =====
     const earthGroup = new THREE.Group();
+    earthGroup.rotation.order = 'YXZ';
+    earthGroup.rotation.set(0.35, -1.2, 0);
     scene.add(earthGroup);
 
     // ===== 地球纹理生成（等距矩形投影 / Equirectangular）=====
-    const TEX_W = 2048;
-    const TEX_H = 1024;
+    const TEX_W = 6144;
+    const TEX_H = 3072;
     const texCanvas = document.createElement('canvas');
     texCanvas.width = TEX_W;
     texCanvas.height = TEX_H;
@@ -219,11 +232,15 @@ async function initEarthCanvas() {
     texCtx.lineTo(TEX_W, TEX_H / 2);
     texCtx.stroke();
 
-    // 加载世界地图数据并绘制国家
+    // 加载世界地图数据并绘制国家（使用内嵌的 WORLD_TOPOLOGY 变量，避免 file:// 协议下的 CORS 限制）
     let worldGeoJSON = null;
     try {
-        const world = await d3.json('data/countries-110m.json');
-        worldGeoJSON = topojson.feature(world, world.objects.countries);
+        if (window.WORLD_TOPOLOGY) {
+            worldGeoJSON = topojson.feature(window.WORLD_TOPOLOGY, window.WORLD_TOPOLOGY.objects.countries);
+        } else {
+            const world = await d3.json('data/countries-110m.json');
+            worldGeoJSON = topojson.feature(world, world.objects.countries);
+        }
     } catch (err) {
         console.error('Failed to load world map:', err);
     }
@@ -234,11 +251,11 @@ async function initEarthCanvas() {
             .scale(TEX_W / (2 * Math.PI));
         const eqPath = d3.geoPath().projection(eqProjection).context(texCtx);
 
-        // 第一层：陆地填充（暗蓝灰色调，与深海形成适度对比）
+        // 第一层：陆地填充
         const landGrad = texCtx.createLinearGradient(0, 0, 0, TEX_H);
-        landGrad.addColorStop(0, '#1a3d60');
-        landGrad.addColorStop(0.5, '#224d78');
-        landGrad.addColorStop(1, '#1a3d60');
+        landGrad.addColorStop(0, '#1c4065');
+        landGrad.addColorStop(0.5, '#265580');
+        landGrad.addColorStop(1, '#1c4065');
         texCtx.fillStyle = landGrad;
         texCtx.beginPath();
         eqPath(worldGeoJSON);
@@ -246,20 +263,19 @@ async function initEarthCanvas() {
 
         // 第二层：细白色轮廓线
         texCtx.save();
-        texCtx.shadowColor = 'rgba(255, 255, 255, 0.5)';
-        texCtx.shadowBlur = 5;
-        texCtx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-        texCtx.lineWidth = 4;
+        texCtx.shadowColor = 'rgba(255, 255, 255, 0.4)';
+        texCtx.shadowBlur = 3;
+        texCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        texCtx.lineWidth = 2.5;
         texCtx.lineJoin = 'round';
         texCtx.beginPath();
         eqPath(worldGeoJSON);
         texCtx.stroke();
-        texCtx.stroke();
         texCtx.restore();
 
-        // 第三层：国界线 —— 更细的浅蓝线
-        texCtx.strokeStyle = 'rgba(130, 190, 230, 0.5)';
-        texCtx.lineWidth = 2;
+        // 第三层：国界线 —— 细浅蓝线
+        texCtx.strokeStyle = 'rgba(130, 190, 230, 0.45)';
+        texCtx.lineWidth = 1.2;
         texCtx.lineJoin = 'round';
         texCtx.beginPath();
         eqPath(worldGeoJSON);
@@ -278,11 +294,33 @@ async function initEarthCanvas() {
     } else {
         earthTexture.encoding = THREE.sRGBEncoding;
     }
-    earthTexture.anisotropy = 4;
+    earthTexture.anisotropy = 16;
+
+    // 降级：地图数据加载失败时显示增强网格
+    if (!worldGeoJSON) {
+        texCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        texCtx.lineWidth = 2;
+        for (let lng = -180; lng < 180; lng += 30) {
+            const x = (lng + 180) / 360 * TEX_W;
+            texCtx.beginPath(); texCtx.moveTo(x, 0); texCtx.lineTo(x, TEX_H); texCtx.stroke();
+        }
+        for (let lat = -90; lat <= 90; lat += 30) {
+            const y = (90 - lat) / 180 * TEX_H;
+            texCtx.beginPath(); texCtx.moveTo(0, y); texCtx.lineTo(TEX_W, y); texCtx.stroke();
+        }
+        // 大字提示
+        texCtx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        texCtx.font = 'bold 48px sans-serif';
+        texCtx.textAlign = 'center';
+        texCtx.fillText('MAP DATA UNAVAILABLE', TEX_W / 2, TEX_H / 2);
+        earthTexture.needsUpdate = true;
+    }
+
+    setSkeletonStage('map.loadingData');  // "载入事故数据"
 
     // ===== 地球球体（降低面数提升性能）=====
     const EARTH_RADIUS = 5;
-    const earthGeometry = new THREE.SphereGeometry(EARTH_RADIUS, 56, 36);
+    const earthGeometry = new THREE.SphereGeometry(EARTH_RADIUS, 80, 50);
     const earthMaterial = new THREE.MeshStandardMaterial({
         map: earthTexture,
         roughness: 0.75,
@@ -380,8 +418,8 @@ async function initEarthCanvas() {
         return tex;
     }
 
-    const dotTexLow = createDotTexture('#ffdd00', '#ff8800', 64);    // 低严重度：亮黄→橙光晕
-    const dotTexHigh = createDotTexture('#dd1111', '#880000', 72);   // 高严重度：深血红→暗红光晕
+    const dotTexLow = createDotTexture('#e6b800', '#995500', 64);    // 低严重度：暗金→棕橙光晕
+    const dotTexHigh = createDotTexture('#cc0000', '#550000', 72);   // 高严重度：深红→暗红光晕
     const dotTexHover = createDotTexture('#ffffff', '#66ccff', 88);  // 悬停：白色→蓝白光晕
 
     // 经纬度 → 3D坐标（精确匹配 Three.js SphereGeometry UV 映射）
@@ -416,8 +454,11 @@ async function initEarthCanvas() {
     // 存储标记数据
     let markerDataList = []; // { accident, sprite, position }
 
+    // 移动端检测
+    const isMobile = ('ontouchstart' in window) || (window.innerWidth < 768);
+    const MOBILE_SCALE_BOOST = isMobile ? 1.6 : 1.0;
+
     function clearMarkers() {
-        // 不再逐个销毁材质（使用共享材质），直接移除子对象
         while (markersGroup.children.length > 0) {
             markersGroup.remove(markersGroup.children[0]);
         }
@@ -427,12 +468,11 @@ async function initEarthCanvas() {
     function createMarkers() {
         clearMarkers();
         const { filteredAccidents } = AppState;
-        const spriteScale = EARTH_RADIUS * 0.05;
+        const spriteScale = EARTH_RADIUS * 0.05 * MOBILE_SCALE_BOOST;
 
         for (const accident of filteredAccidents) {
             const pos = latLngToVec3(accident.latitude, accident.longitude, EARTH_RADIUS * 1.02);
             const isHigh = accident.fatalities > 50;
-            // 所有同类型精灵共享材质，不再每个精灵创建一个材质实例
             const sprite = new THREE.Sprite(isHigh ? sharedMatHigh : sharedMatLow);
             sprite.position.copy(pos);
             sprite.scale.set(spriteScale, spriteScale, 1);
@@ -447,7 +487,7 @@ async function initEarthCanvas() {
     let dragPrevX = 0;
     let dragPrevY = 0;
     let didDrag = false;
-    let autoRotateSpeed = 0.15; // 自动旋转速度（度/秒）
+    let autoRotateSpeed = 5;  // 5°/秒
     let autoRotateEnabled = true;
     let targetZoom = 16;
     let currentZoom = 16;
@@ -458,7 +498,8 @@ async function initEarthCanvas() {
     // ===== 射线检测 =====
     const raycaster = new THREE.Raycaster();
     raycaster.params.Points.threshold = 0.5;
-    raycaster.params.Sprite.threshold = 0.5;
+    // 移动端增大射线检测阈值，方便手指点击
+    raycaster.params.Sprite.threshold = isMobile ? 1.2 : 0.5;
 
     function getIntersections(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
@@ -482,7 +523,7 @@ async function initEarthCanvas() {
     // ===== 重置视图 =====
     function resetView() {
         targetZoom = 16;
-        earthGroup.rotation.set(0.35, 0, 0);
+        earthGroup.rotation.set(0.35, -1.2, 0);
         autoRotateEnabled = true;
         updateZoomIndicator();
     }
@@ -499,18 +540,16 @@ async function initEarthCanvas() {
         e.preventDefault();
     });
 
-    // 拖拽用缓存向量
-    const _dragVecY = new THREE.Vector3(0, 1, 0);
-    const _dragVecX = new THREE.Vector3(1, 0, 0);
-
     canvas.addEventListener('mousemove', (e) => {
         if (isDragging) {
             const dx = e.clientX - dragPrevX;
             const dy = e.clientY - dragPrevY;
             if (Math.abs(dx) > 1 || Math.abs(dy) > 1) didDrag = true;
-            earthGroup.rotateOnWorldAxis(_dragVecY, dx * 0.005);
-            _dragVecX.set(1, 0, 0).applyQuaternion(earthGroup.quaternion).normalize();
-            earthGroup.rotateOnWorldAxis(_dragVecX, dy * 0.005);
+            // 水平拖拽 → 旋转 Y 轴；垂直拖拽 → 旋转 X 轴（均用 Euler，避免与 quaternion 冲突导致卡死）
+            earthGroup.rotation.y += dx * 0.005;
+            earthGroup.rotation.x += dy * 0.005;
+            // 限制 X 轴旋转范围，防止翻转
+            earthGroup.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, earthGroup.rotation.x));
             dragPrevX = e.clientX;
             dragPrevY = e.clientY;
             tooltip.style.display = 'none';
@@ -518,7 +557,6 @@ async function initEarthCanvas() {
             const intersections = getIntersections(e.clientX, e.clientY);
             const hit = intersections.find(i => i.object.userData && i.object.userData.accident);
             if (hit && hit.object.userData.accident !== (hoveredMarker ? hoveredMarker.accident : null)) {
-                // 悬停标记：切换到共享高亮材质
                 if (hoveredMarker) {
                     hoveredMarker.sprite.material = hoveredMarker.sprite.userData.isHigh ? sharedMatHigh : sharedMatLow;
                 }
@@ -535,7 +573,6 @@ async function initEarthCanvas() {
                     showTooltip(hoveredMarker.accident, sx, sy);
                 }
             } else if (!hit && hoveredMarker) {
-                // 取消悬停：恢复原始共享材质
                 const prev = hoveredMarker;
                 hoveredMarker = null;
                 prev.sprite.material = prev.sprite.userData.isHigh ? sharedMatHigh : sharedMatLow;
@@ -615,9 +652,9 @@ async function initEarthCanvas() {
             const dx = e.touches[0].clientX - touchPrevX;
             const dy = e.touches[0].clientY - touchPrevY;
             if (Math.abs(dx) > 2 || Math.abs(dy) > 2) didDrag = true;
-            earthGroup.rotateOnWorldAxis(_dragVecY, dx * 0.005);
-            _dragVecX.set(1, 0, 0).applyQuaternion(earthGroup.quaternion).normalize();
-            earthGroup.rotateOnWorldAxis(_dragVecX, dy * 0.005);
+            earthGroup.rotation.y += dx * 0.005;
+            earthGroup.rotation.x += dy * 0.005;
+            earthGroup.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, earthGroup.rotation.x));
             touchPrevX = e.touches[0].clientX;
             touchPrevY = e.touches[0].clientY;
         } else if (e.touches.length === 2) {
@@ -672,20 +709,18 @@ async function initEarthCanvas() {
     });
 
     // ===== 隐藏骨架屏 =====
+    setSkeletonStage('map.ready');
     setTimeout(() => {
         const skeleton = document.querySelector('.map-skeleton');
         if (skeleton) skeleton.classList.add('hidden');
-    }, 300);
+    }, 400);
 
     // ===== 初始标记和指示器 =====
     createMarkers();
     updateZoomIndicator();
 
-    // ===== 渲染循环（优化：缓存对象、空闲降帧、避免 GC）=====
-    const _rotAxisY = new THREE.Vector3(0, 1, 0);  // 缓存旋转轴
-    const IDLE_SKIP = 5;  // 空闲时每 6 帧渲染 1 次 ≈ 10fps
+    // ===== 渲染循环 =====
     let _lastFrameTime = performance.now();
-    let _idleFrames = 0;
 
     function animate(now) {
         earthAnimationId = requestAnimationFrame(animate);
@@ -696,18 +731,11 @@ async function initEarthCanvas() {
 
         const isZooming = Math.abs(targetZoom - currentZoom) > 0.02;
         const isRotating = autoRotateEnabled && !isDragging;
+        const isActive = isRotating || isZooming || isDragging;
 
-        // 空闲帧跳过：无交互时降低渲染频率
-        if (!isRotating && !isZooming && !isDragging) {
-            _idleFrames++;
-            if (_idleFrames % (IDLE_SKIP + 1) !== 0) return;
-        } else {
-            _idleFrames = 0;
-        }
-
-        // 自动旋转（复用缓存的 Vector3，避免 GC）
+        // 自动旋转：直接递增 rotation.y（Euler YXZ 顺序，Y 轴始终为世界垂直轴）
         if (isRotating) {
-            earthGroup.rotateOnWorldAxis(_rotAxisY, autoRotateSpeed * dt * (Math.PI / 180));
+            earthGroup.rotation.y += autoRotateSpeed * dt * (Math.PI / 180);
         }
 
         // 平滑缩放
@@ -717,8 +745,8 @@ async function initEarthCanvas() {
         }
         camera.position.z = currentZoom;
 
-        // 相机位置变动时才更新大气着色器
-        if (isZooming || isRotating || isDragging) {
+        // 相机变动时更新大气着色器
+        if (isActive) {
             atmosMaterial.uniforms.uViewPosition.value.copy(camera.position);
             outerAtmosMaterial.uniforms.uViewPosition.value.copy(camera.position);
         }
@@ -986,9 +1014,7 @@ function updateDashboard() {
     clearTimeout(updateTimeout);
     updateTimeout = setTimeout(() => {
         const { filteredAccidents } = AppState;
-        
-        needsRedraw = true;
-        
+
         updateStatCards(filteredAccidents);
         updateTrendChart(filteredAccidents);
         updateCauseChart(filteredAccidents);
@@ -1158,4 +1184,51 @@ function updateSurvivalChart(accidents) {
     survivalChart.data.datasets[1].data = [stats.injured];
     survivalChart.data.datasets[2].data = [stats.uninjured];
     survivalChart.update();
+
+    updateInsights(accidents);
+}
+// ===== 数据摘要提炼（彩色高亮文字段落）=====
+function updateInsights(accidents) {
+    const el = document.getElementById('insightsText');
+    if (!el || !accidents.length) return;
+
+    const years = [...new Set(accidents.map(a => getYearFromDate(a.date)))].sort();
+    const totalAcc = accidents.length;
+    const totalFat = accidents.reduce((s, a) => s + a.fatalities, 0);
+    const deadliest = accidents.reduce((max, a) => a.fatalities > max.fatalities ? a : max, accidents[0]);
+    const causeCounts = {};
+    accidents.forEach(a => { causeCounts[a.cause] = (causeCounts[a.cause] || 0) + 1; });
+    const topCause = Object.entries(causeCounts).sort((a, b) => b[1] - a[1])[0];
+    const recentYear = Math.max(...years);
+    const recentAcc = accidents.filter(a => getYearFromDate(a.date) >= recentYear - 9);
+    const olderAcc = accidents.filter(a => {
+        const y = getYearFromDate(a.date);
+        return y < recentYear - 9 && y >= recentYear - 19;
+    });
+    const recentAvg = recentAcc.length / 10;
+    const olderAvg = olderAcc.length / Math.max(1, Math.min(10, years.length - 10));
+    const changePct = olderAvg > 0 ? Math.round((recentAvg - olderAvg) / olderAvg * 100) : 0;
+    const trendWord = changePct < 0 ? '下降' : '上升';
+    const trendClass = changePct < 0 ? 'hi-green' : 'hi-red';
+    const dirSymbol = changePct < 0 ? '↓' : '↑';
+
+    const isZh = AppState.currentLang === 'zh';
+    el.innerHTML = isZh ? `
+        本数据库收录了自 <span class="hi-blue">${years[0]} 年</span>至 <span class="hi-blue">${years[years.length-1]} 年</span>间全球范围内
+        <span class="hi-red">${totalAcc} 起</span>重大航空事故，共造成
+        <span class="hi-red">${totalFat.toLocaleString()} 人</span>遇难。其中遇难人数最多的事故是
+        <span class="hi-yellow">${deadliest.date} ${td(deadliest.airline)} ${deadliest.flightNumber || ''}</span>（${deadliest.location}），导致
+        <span class="hi-red">${deadliest.fatalities} 人</span>死亡。<span class="hi-yellow">${t('cause.' + topCause[0])}</span>是首要事故原因，占全部事故的
+        <span class="hi-yellow">${Math.round(topCause[1] / totalAcc * 100)}%</span>。安全趋势方面，近十年年均事故数较前十年
+        <span class="${trendClass}">${dirSymbol} ${trendWord} ${Math.abs(changePct)}%</span>。
+    ` : `
+        This database records <span class="hi-red">${totalAcc} major</span> aviation accidents worldwide from
+        <span class="hi-blue">${years[0]}</span> to <span class="hi-blue">${years[years.length-1]}</span>, resulting in
+        <span class="hi-red">${totalFat.toLocaleString()} fatalities</span>. The deadliest incident was
+        <span class="hi-yellow">${deadliest.date} ${deadliest.airline} ${deadliest.flightNumber || ''}</span> (${deadliest.location}), claiming
+        <span class="hi-red">${deadliest.fatalities} lives</span>.
+        <span class="hi-yellow">${topCause[0]}</span> is the leading cause, accounting for
+        <span class="hi-yellow">${Math.round(topCause[1] / totalAcc * 100)}%</span> of all accidents.
+        The recent 10-year annual average has <span class="${trendClass}">${dirSymbol} ${trendWord} ${Math.abs(changePct)}%</span> compared to the previous decade.
+    `;
 }
